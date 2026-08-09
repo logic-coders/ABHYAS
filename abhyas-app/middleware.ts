@@ -10,7 +10,7 @@ const ADMIN_ROUTES = ['/admin'];
 /** API routes that require admin role for mutation */
 const ADMIN_API_ROUTES = ['/api/upload-pdf', '/api/test-series'];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip auth check for auth API routes and static assets
@@ -24,7 +24,7 @@ export function middleware(request: NextRequest) {
 
   // Read JWT from cookie
   const token = request.cookies.get(COOKIE_NAME)?.value;
-  const user = token ? verifyToken(token) : null;
+  const user = token ? await verifyToken(token) : null;
 
   // ── Public routes (login, register) ──
   if (PUBLIC_ROUTES.some((route) => pathname === route)) {

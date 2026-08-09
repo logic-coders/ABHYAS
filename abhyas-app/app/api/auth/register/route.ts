@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
     // Auto-login after registration
     const safeUser = toSafeUser(user);
-    const token = createToken(safeUser);
+    const token = await createToken(safeUser);
 
     const response = NextResponse.json({ user: safeUser }, { status: 201 });
     setAuthCookie(response, token);

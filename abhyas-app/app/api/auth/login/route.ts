@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     // Create token & set cookie
     const safeUser = toSafeUser(user);
-    const token = createToken(safeUser);
+    const token = await createToken(safeUser);
 
     const response = NextResponse.json({ user: safeUser }, { status: 200 });
     setAuthCookie(response, token);

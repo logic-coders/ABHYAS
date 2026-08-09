@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { SignJWT, jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 import { SafeUser, User } from './types';
 
@@ -19,24 +19,30 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 
 /* ─── JWT utilities ─── */
 
-export function createToken(user: SafeUser): string {
-  return jwt.sign(
-    { id: user.id, name: user.name, email: user.email, role: user.role },
-    JWT_SECRET,
-    { expiresIn: TOKEN_EXPIRY }
-  );
+const getJwtSecretKey = () => {
+  const secret = process.env.JWT_SECRET || 'abhyas-dev-secret-change-in-production';
+  return new TextEncoder().encode(secret);
+};
+
+export async function createToken(user: SafeUser): Promise<string> {
+  return await new SignJWT({ ...user })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(TOKEN_EXPIRY)
+    .sign(getJwtSecretKey());
 }
 
-export function verifyToken(token: string): SafeUser | null {
+export async function verifyToken(token: string): Promise<SafeUser | null> {
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload & SafeUser;
+    const { payload } = await jwtVerify(token, getJwtSecretKey());
     return {
-      id: payload.id,
-      name: payload.name,
-      email: payload.email,
-      role: payload.role,
+      id: payload.id as string,
+      name: payload.name as string,
+      email: payload.email as string,
+      role: payload.role as 'admin' | 'user',
     };
-  } catch {
+  } catch (err) {
+    console.error("verifyToken error:", err);
     return null;
   }
 }
@@ -69,10 +75,10 @@ export function clearAuthCookie(response: NextResponse): void {
  * Extract the current user from the request's auth cookie.
  * Returns null if not authenticated or token is invalid.
  */
-export function getCurrentUser(request: NextRequest): SafeUser | null {
+export async function getCurrentUser(request: NextRequest): Promise<SafeUser | null> {
   const token = request.cookies.get(COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return await verifyToken(token);
 }
 
 /**

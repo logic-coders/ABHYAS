@@ -7,7 +7,7 @@ import { getCurrentUser } from '@/lib/auth';
  * Used by the client to hydrate auth state on page load.
  */
 export async function GET(request: NextRequest) {
-  const user = getCurrentUser(request);
+  const user = await getCurrentUser(request);
 
   if (!user) {
     return NextResponse.json(
