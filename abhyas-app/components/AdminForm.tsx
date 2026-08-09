@@ -12,6 +12,10 @@ export default function AdminForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // State for random test generation
+  const [randomSubject, setRandomSubject] = useState<Subject>('Math');
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
@@ -80,6 +84,30 @@ export default function AdminForm() {
       showToast('error', error instanceof Error ? error.message : 'Something went wrong');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateRandomTest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsGenerating(true);
+    try {
+      const res = await fetch('/api/admin/generate-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: randomSubject }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to generate test');
+      }
+
+      showToast('success', `Random test generated successfully for ${randomSubject}!`);
+    } catch (error) {
+      console.error('Generate error:', error);
+      showToast('error', error instanceof Error ? error.message : 'Something went wrong');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -194,7 +222,43 @@ export default function AdminForm() {
               <span className="spinner" /> Uploading & Creating...
             </>
           ) : (
-            '🚀 Create Test Series'
+            'Create Test Series'
+          )}
+        </button>
+      </form>
+
+      <div style={{ margin: '3rem 0', height: '1px', background: 'var(--border-subtle)' }} />
+
+      <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Generate Random Test</h2>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+        Creates a new test series with 80 random questions selected from all previously uploaded PDFs for the selected subject.
+      </p>
+
+      <form className="admin-form" onSubmit={handleGenerateRandomTest}>
+        <div className="form-group">
+          <label htmlFor="random-subject" className="form-label">
+            Subject
+          </label>
+          <select
+            id="random-subject"
+            className="form-select"
+            value={randomSubject}
+            onChange={(e) => setRandomSubject(e.target.value as Subject)}
+          >
+            {SUBJECTS.map((s) => (
+              <option key={s} value={s}>
+                {SUBJECT_ICONS[s]} {s}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button className="btn btn-secondary btn-lg" type="submit" disabled={isGenerating}>
+          {isGenerating ? (
+            <>
+              <span className="spinner" /> Generating...
+            </>
+          ) : (
+            'Generate 80-Question Test'
           )}
         </button>
       </form>

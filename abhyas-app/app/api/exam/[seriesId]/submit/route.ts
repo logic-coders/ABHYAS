@@ -3,6 +3,10 @@ import { getTestSeriesById } from '@/lib/metadata-store';
 import { downloadPDF } from '@/lib/s3';
 import { extractText, parseQuestions, parseAnswers } from '@/lib/pdf-parser';
 import { ExamAnswer, ExamResult, ResultItem } from '@/lib/types';
+import { addResult } from '@/lib/result-store';
+import { getCurrentUser } from '@/lib/auth';
+import { v4 as uuidv4 } from 'uuid';
+import { NextRequest } from 'next/server';
 
 /**
  * POST /api/exam/[seriesId]/submit
@@ -12,7 +16,7 @@ import { ExamAnswer, ExamResult, ResultItem } from '@/lib/types';
  * Body: { answers: ExamAnswer[] }
  */
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ seriesId: string }> }
 ) {
   try {
@@ -36,14 +40,59 @@ export async function POST(
       );
     }
 
-    // Download PDF from S3
-    const pdfBuffer = await downloadPDF(series.s3Key);
-    const text = await extractText(pdfBuffer);
+    // Parse correct answers and questions
+    let correctAnswers = new Map<number, string>();
+    let questions = [];
 
-    // Parse correct answers
-    const correctAnswers = parseAnswers(text, series.startQuestion, series.endQuestion);
-    // Parse questions for display in results
-    const questions = parseQuestions(text, series.startQuestion, series.endQuestion);
+    if (series.isRandom && series.randomQuestions) {
+      const groupedByS3Key = new Map<string, number[]>();
+      for (const rq of series.randomQuestions) {
+        if (!groupedByS3Key.has(rq.s3Key)) {
+          groupedByS3Key.set(rq.s3Key, []);
+        }
+        groupedByS3Key.get(rq.s3Key)!.push(rq.number);
+      }
+
+      const fetchPromises = Array.from(groupedByS3Key.entries()).map(async ([s3Key, nums]) => {
+        const pdfBuffer = await downloadPDF(s3Key);
+        const text = await extractText(pdfBuffer);
+        const start = Math.min(...nums);
+        const end = Math.max(...nums);
+        const parsed = parseQuestions(text, start, end);
+        const parsedAns = parseAnswers(text, start, end);
+        const requiredSet = new Set(nums);
+        
+        return {
+          questions: parsed.filter(q => requiredSet.has(q.number)),
+          answers: parsedAns
+        };
+      });
+
+      const resultsArray = await Promise.all(fetchPromises);
+      const rawQuestions = resultsArray.flatMap(r => r.questions);
+      
+      // Remap question numbers 1..N based on the random order
+      questions = rawQuestions.map((q, idx) => ({ ...q, number: idx + 1 }));
+      
+      // Remap correct answers to the new 1..N indices
+      rawQuestions.forEach((q, idx) => {
+        // Find which PDF's answer map this belonged to
+        const parentResult = resultsArray.find(r => r.questions.includes(q));
+        if (parentResult) {
+          const ans = parentResult.answers.get(q.number);
+          if (ans) {
+            correctAnswers.set(idx + 1, ans);
+          }
+        }
+      });
+
+    } else {
+      // Download single PDF from S3
+      const pdfBuffer = await downloadPDF(series.s3Key);
+      const text = await extractText(pdfBuffer);
+      correctAnswers = parseAnswers(text, series.startQuestion, series.endQuestion);
+      questions = parseQuestions(text, series.startQuestion, series.endQuestion);
+    }
 
     // Build a lookup for user answers
     const userAnswerMap = new Map<number, string>();
@@ -94,6 +143,22 @@ export async function POST(
       percentage,
       breakdown,
     };
+
+    // Save result to store
+    const user = await getCurrentUser(request);
+    if (user) {
+      await addResult({
+        id: uuidv4(),
+        userId: user.id,
+        seriesId: series.id,
+        seriesTitle: series.title,
+        subject: series.subject,
+        score: correct,
+        totalQuestions,
+        percentage,
+        date: new Date().toISOString()
+      });
+    }
 
     return NextResponse.json(result);
   } catch (error) {

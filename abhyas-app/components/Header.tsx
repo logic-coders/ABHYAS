@@ -9,9 +9,13 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-inner">
-        <Link href="/" className="logo">
-          <span className="logo-icon">📖</span>
-          Abhyas
+        <Link href="/" className="logo" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+          <img
+            src="/logo.png"
+            alt="Abhyas Logo"
+            style={{ height: '32px', marginRight: '8px' }}
+          />
+          <span style={{ fontWeight: 'bold', fontSize: '1.65rem', letterSpacing: '-0.02em' }}>ABHYAS</span>
         </Link>
 
         <nav>
@@ -36,7 +40,7 @@ export default function Header() {
                 )}
                 <li>
                   <div className="user-menu">
-                    <span className="user-badge">
+                    <Link href="/profile" className="user-badge" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <span className="user-avatar">
                         {user.name.charAt(0).toUpperCase()}
                       </span>
@@ -44,7 +48,7 @@ export default function Header() {
                       {user.role === 'admin' && (
                         <span className="role-tag">Admin</span>
                       )}
-                    </span>
+                    </Link>
                     <button className="btn btn-ghost btn-sm" onClick={logout}>
                       Logout
                     </button>

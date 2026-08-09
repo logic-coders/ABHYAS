@@ -23,12 +23,42 @@ export async function GET(
       );
     }
 
-    // Download PDF from S3
-    const pdfBuffer = await downloadPDF(series.s3Key);
+    let questions = [];
 
-    // Extract text and parse questions
-    const text = await extractText(pdfBuffer);
-    const questions = parseQuestions(text, series.startQuestion, series.endQuestion);
+    if (series.isRandom && series.randomQuestions) {
+      // Group by S3 Key to minimize downloads
+      const groupedByS3Key = new Map<string, number[]>();
+      for (const rq of series.randomQuestions) {
+        if (!groupedByS3Key.has(rq.s3Key)) {
+          groupedByS3Key.set(rq.s3Key, []);
+        }
+        groupedByS3Key.get(rq.s3Key)!.push(rq.number);
+      }
+
+      // Fetch and parse each required PDF in parallel
+      const fetchPromises = Array.from(groupedByS3Key.entries()).map(async ([s3Key, nums]) => {
+        const pdfBuffer = await downloadPDF(s3Key);
+        const text = await extractText(pdfBuffer);
+        // Find min and max for this PDF to parse efficiently
+        const start = Math.min(...nums);
+        const end = Math.max(...nums);
+        const parsed = parseQuestions(text, start, end);
+        // Filter only the randomly selected ones
+        const requiredSet = new Set(nums);
+        return parsed.filter(q => requiredSet.has(q.number));
+      });
+
+      const resultsArray = await Promise.all(fetchPromises);
+      const rawQuestions = resultsArray.flat();
+      
+      // Remap question numbers 1..N based on the random order
+      questions = rawQuestions.map((q, idx) => ({ ...q, number: idx + 1 }));
+    } else {
+      // Regular single-PDF test series
+      const pdfBuffer = await downloadPDF(series.s3Key);
+      const text = await extractText(pdfBuffer);
+      questions = parseQuestions(text, series.startQuestion, series.endQuestion);
+    }
 
     if (questions.length === 0) {
       return NextResponse.json(

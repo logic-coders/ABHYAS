@@ -27,6 +27,8 @@ export interface TestSeries {
   startQuestion: number;
   endQuestion: number;
   createdAt: string; // ISO date string
+  isRandom?: boolean;
+  randomQuestions?: { s3Key: string, number: number }[];
 }
 
 /** A single parsed question (options only — no answer exposed to client) */

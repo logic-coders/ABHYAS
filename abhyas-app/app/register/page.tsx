@@ -131,7 +131,7 @@ export default function RegisterPage() {
                 <span className="spinner" /> Creating account...
               </>
             ) : (
-              '🚀 Create Account'
+              'Create Account'
             )}
           </button>
         </form>

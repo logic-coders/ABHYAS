@@ -7,6 +7,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'abhyas-dev-secret-change-in-produc
 const COOKIE_NAME = 'abhyas-token';
 const TOKEN_EXPIRY = '7d'; // 7 days
 
+// Whitelisted admin emails
+export const ADMIN_EMAILS = ['chandansingh15102000@gmail.com'];
+
 /* ─── Password utilities ─── */
 
 export async function hashPassword(plain: string): Promise<string> {
@@ -85,11 +88,12 @@ export async function getCurrentUser(request: NextRequest): Promise<SafeUser | n
  * Strip sensitive fields from a User to produce a SafeUser.
  */
 export function toSafeUser(user: User): SafeUser {
+  const role = ADMIN_EMAILS.includes(user.email.toLowerCase()) ? 'admin' : 'user';
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role,
   };
 }
 
