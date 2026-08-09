@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getUserByEmail } from '@/lib/user-store';
-import { verifyPassword, createToken, setAuthCookie, toSafeUser } from '@/lib/auth';
+import { createToken, setAuthCookie, toSafeUser } from '@/lib/auth';
+import { verifyPassword } from '@/lib/password';
 
 /**
  * POST /api/auth/login

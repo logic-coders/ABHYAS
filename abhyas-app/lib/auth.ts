@@ -1,4 +1,3 @@
-import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 import { SafeUser, User } from './types';
@@ -9,16 +8,6 @@ const TOKEN_EXPIRY = '7d'; // 7 days
 
 // Whitelisted admin emails
 export const ADMIN_EMAILS = ['chandansingh15102000@gmail.com'];
-
-/* ─── Password utilities ─── */
-
-export async function hashPassword(plain: string): Promise<string> {
-  return bcrypt.hash(plain, 12);
-}
-
-export async function verifyPassword(plain: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(plain, hash);
-}
 
 /* ─── JWT utilities ─── */
 

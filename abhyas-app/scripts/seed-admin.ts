@@ -11,7 +11,7 @@
 import { config } from 'dotenv';
 config({ path: '.env.local' });
 
-import { hashPassword } from '../lib/auth';
+import { hashPassword } from '../lib/password';
 import { addUser } from '../lib/user-store';
 import { User } from '../lib/types';
 import { v4 as uuidv4 } from 'uuid';
