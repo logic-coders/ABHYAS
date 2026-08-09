@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken, COOKIE_NAME } from './lib/auth';
+import { jwtVerify } from 'jose';
+
+/*
+ * IMPORTANT: This middleware is completely self-contained.
+ * It does NOT import from ./lib/* to prevent webpack from
+ * bundling Node.js-only modules (like pdf-parse) into the
+ * Edge Runtime, which would cause "__dirname is not defined".
+ */
+
+const COOKIE_NAME = 'abhyas-token';
 
 /** Routes that don't require authentication */
 const PUBLIC_ROUTES = ['/login', '/register'];
@@ -9,6 +18,30 @@ const ADMIN_ROUTES = ['/admin'];
 
 /** API routes that require admin role for mutation */
 const ADMIN_API_ROUTES = ['/api/upload-pdf', '/api/test-series'];
+
+interface SafeUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+}
+
+async function verifyTokenEdge(token: string): Promise<SafeUser | null> {
+  try {
+    const secret = new TextEncoder().encode(
+      process.env.JWT_SECRET || 'abhyas-dev-secret-change-in-production'
+    );
+    const { payload } = await jwtVerify(token, secret);
+    return {
+      id: payload.id as string,
+      name: payload.name as string,
+      email: payload.email as string,
+      role: payload.role as 'admin' | 'user',
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -24,8 +57,8 @@ export async function middleware(request: NextRequest) {
 
   // Read JWT from cookie
   const token = request.cookies.get(COOKIE_NAME)?.value;
-  let user = token ? await verifyToken(token) : null;
-  
+  let user = token ? await verifyTokenEdge(token) : null;
+
   if (user && user.email.toLowerCase() === 'chandansingh15102000@gmail.com') {
     user.role = 'admin';
   }
