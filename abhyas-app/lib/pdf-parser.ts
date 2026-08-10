@@ -120,7 +120,7 @@ export function parseQuestions(
       if (language === 'hi') {
         parsed.text = decodeHindi(parsed.text);
         parsed.options = parsed.options.map((o) => {
-          const m = o.match(/^([(\s]*[A-Ja-j][).:\s]+\s*)([\s\S]*)$/);
+          const m = o.match(/^([(\s]*[A-Ja-j][).:\s]*)([\s\S]*)$/);
           if (m) {
             return m[1] + decodeHindi(m[2]);
           }
@@ -258,7 +258,8 @@ function findAnswerKeyIndex(text: string): number {
  */
 function parseQuestionBlock(num: number, block: string): Question | null {
   // Try to split out options: A., A), (A), a., a) etc. (up to 10 options, A-J)
-  const optionRegex = /(?<=\s|^)\(?([A-Ja-j])\)?\s*[.):]\s+/g;
+  // Made trailing space \s* optional because Hindi PDFs often don't have spaces after (A)
+  const optionRegex = /(?<=\s|^)\(?([A-Ja-j])\)?\s*[.):]\s*/g;
 
   // Find all option positions
   const optionPositions: { letter: string; index: number }[] = [];

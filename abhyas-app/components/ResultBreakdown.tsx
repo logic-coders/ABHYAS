@@ -70,7 +70,7 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
                 <p className="detail-question">{item.questionText}</p>
                 <div className="detail-options">
                   {item.options.map((opt, oidx) => {
-                    const optLetter = opt.match(/^[(\s]*([A-Da-d])[).:\s]/)?.[1]?.toUpperCase() || '';
+                    const optLetter = opt.match(/^[(\s]*([A-Ja-j])[).:\s]/)?.[1]?.toUpperCase() || '';
                     const isUserChoice = optLetter === item.userAnswer;
                     const isCorrectChoice = optLetter === item.correctAnswer;
 
