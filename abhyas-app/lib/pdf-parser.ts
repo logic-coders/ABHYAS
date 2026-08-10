@@ -1,4 +1,4 @@
-import { PDFParse } from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 import { Question } from './types';
 import { decodeHindi } from './hindi-decode';
 
@@ -8,8 +8,7 @@ export type Language = 'en' | 'hi';
  * Extract raw text content from a PDF buffer.
  */
 export async function extractText(pdfBuffer: Buffer): Promise<string> {
-  const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
-  const result = await parser.getText();
+  const result = await pdfParse(pdfBuffer);
   let text = result.text ?? '';
   
   // Strip all instructions before the first PART section
