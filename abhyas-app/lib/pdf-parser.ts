@@ -177,7 +177,7 @@ export function parseAnswers(
     if (targetSetIndex !== -1) {
       const lines = answerSection.split('\n');
       for (const line of lines) {
-        const pairs = Array.from(line.matchAll(/\b(\d+)\s+([A-Ea-e])\b/g));
+        const pairs = Array.from(line.matchAll(/(\d+)\s*[.):\-–\s]*\s*([A-Ea-e])/gi));
         if (pairs.length > targetSetIndex) {
           const pair = pairs[targetSetIndex];
           const num = parseInt(pair[1], 10);
@@ -190,9 +190,9 @@ export function parseAnswers(
     }
   }
 
-  // Match patterns like: 1. C, 1) C, Q1. C, 1 - C, 1. (C), 1.(C), 1 C
+  // Match patterns like: 1. C, 1) C, Q1. C, 1 - C, 1. (C), 1.(C), 1 C, 71C
   const answerRegex =
-    /(?:Q(?:uestion)?\s*\.?\s*)?(\d+)\s*[.):\-–\s]+\s*\(?([A-Ea-e])\)?/gi;
+    /(?:Q(?:uestion)?\s*\.?\s*)?(\d+)\s*[.):\-–\s]*\s*\(?([A-Ea-e])\)?/gi;
 
   let match: RegExpExecArray | null;
   while ((match = answerRegex.exec(answerSection)) !== null) {
@@ -234,6 +234,8 @@ function findAnswerKeyIndex(text: string): number {
     /\banswers?\b\s*[:]/i,
     /\bcorrect\s+answers?\b/i,
     /\bsolution(?:s)?\b\s*[:]/i,
+    /mÙkjkyk/i, // उत्तरमाला (Uttarmala) in Kruti Dev
+    /mÙkj\s*[:\-]/i, // उत्तर: (Uttar:) in Kruti Dev
   ];
 
   for (const marker of markers) {
@@ -310,7 +312,7 @@ function parseInlineAnswers(
 
   // Pattern: "Answer: C" or "Ans: C" or "Correct: C"
   const inlineRegex =
-    /(?:Q(?:uestion)?\s*\.?\s*)?(\d+)[.)]\s*[\s\S]*?(?:answer|ans|correct)\s*[:=]\s*\(?([A-Da-d])\)?/gi;
+    /(?:Q(?:uestion)?\s*\.?\s*)?(\d+)[.)]\s*[\s\S]*?(?:answer|ans|correct)\s*[:=]\s*\(?([A-Ea-e])\)?/gi;
 
   let match: RegExpExecArray | null;
   while ((match = inlineRegex.exec(text)) !== null) {
