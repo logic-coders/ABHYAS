@@ -5,7 +5,7 @@ import { jwtVerify } from 'jose';
  * IMPORTANT: This middleware is completely self-contained.
  * It does NOT import from ./lib/* to prevent webpack from
  * bundling Node.js-only modules (like pdf-parse) into the
- * Edge Runtime, which would cause "__dirname is not defined".
+ * Edge Runtime, which would cause node globals not defined errors.
  */
 
 const COOKIE_NAME = 'abhyas-token';

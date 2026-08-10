@@ -12,15 +12,20 @@ export async function extractText(pdfBuffer: Buffer): Promise<string> {
   const result = await parser.getText();
   let text = result.text ?? '';
   
+  // Strip all instructions before the first PART section
+  const firstPartIdx = text.search(/PART\s*-\s*I\b|PअRT\s*-\s*I\b/i);
+  if (firstPartIdx !== -1) {
+    text = text.substring(firstPartIdx);
+  }
+
   // Clean up common headers/footers
-  text = text.replace(/PART\s*-\s*[IVX]+\s*\n*\s*\([A-Z]+\)/gi, '');
+  text = text.replace(/PART\s*-\s*[IVX]+\s*\n*\s*\([A-Z\s]+\)/gi, '');
   text = text.replace(/PअRT\s*-\s*खखख\s*\n*\s*\(चणSखउ\)/gi, ''); // pre-decoded garbage just in case
 
   // Remove page numbers like -- 21 of 46 -- or -- 21 ेष 46 --
   text = text.replace(/--\s*\d+\s+(of|ेष)\s+\d+\s*--/gi, '');
   
   // Remove page footers like "22 12/MATH/M-2024-15/S-315-A" or "22 12/चअत/च-2024-15/S-315-ए"
-  // Usually starts with a number, space, number, slash, etc.
   text = text.replace(/\n\s*\d+\s+\d+\/[^\n]+/g, '\n');
   
   return text;
@@ -89,7 +94,7 @@ export function parseQuestions(
 
   // Match question blocks: handles Q1., 1., 1), Question 1.  etc.
   const questionRegex =
-    /(?:Q(?:uestion)?\s*\.?\s*)?(\d+)[.)]\s*([\s\S]*?)(?=(?:(?:Q(?:uestion)?\s*\.?\s*)?\d+[.)])|$)/gi;
+    /(?:^|\n)\s*(?:Q(?:uestion)?\s*\.?\s*)?(\d+)[.)]\s*([\s\S]*?)(?=(?:(?:^|\n)\s*(?:Q(?:uestion)?\s*\.?\s*)?\d+[.)])|$)/gi;
 
   let match: RegExpExecArray | null;
   while ((match = questionRegex.exec(questionText)) !== null) {
@@ -280,13 +285,7 @@ function parseQuestionBlock(num: number, block: string): Question | null {
     let optionText = block.substring(start, end).trim();
 
     // Remove trailing answer key section or garbage footers if accidentally included
-    const garbageKeywords = ['ANSWER KEY', 'SPACE FOR ROUGH', 'SPअउए FजR', 'रμ’$', 'प्रíन-पुpस्तका', 'महÎवपूर्ण अनुदेश>'];
-    for (const kw of garbageKeywords) {
-      const idx = optionText.indexOf(kw);
-      if (idx !== -1) {
-        optionText = optionText.substring(0, idx).trim();
-      }
-    }
+    optionText = optionText.replace(/(\b(?:answer key|space for rough|rough work|रफ कार्य|SPअउए FजR|रμ’\$|प्रíन-पुpस्तका|महÎवपूर्ण अनुदेश>).*)[\s\S]*/i, '').trim();
 
     options.push(optionText);
   }
