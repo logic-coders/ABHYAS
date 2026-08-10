@@ -83,7 +83,7 @@ export async function middleware(request: NextRequest) {
 
   // ── Admin-only pages ──
   if (ADMIN_ROUTES.some((route) => pathname.startsWith(route))) {
-    if (user.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
       const url = request.nextUrl.clone();
       url.pathname = '/';
       return NextResponse.redirect(url);
@@ -95,7 +95,7 @@ export async function middleware(request: NextRequest) {
     ADMIN_API_ROUTES.some((route) => pathname.startsWith(route)) &&
     request.method !== 'GET'
   ) {
-    if (user.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }

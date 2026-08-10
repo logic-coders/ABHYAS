@@ -108,7 +108,7 @@ export function parseQuestions(
       if (language === 'hi') {
         parsed.text = decodeHindi(parsed.text);
         parsed.options = parsed.options.map((o) => {
-          const m = o.match(/^([(\s]*[A-Ja-j][).:\s]+\s*)(.*)$/s);
+          const m = o.match(/^([(\s]*[A-Ja-j][).:\s]+\s*)([\s\S]*)$/);
           if (m) {
             return m[1] + decodeHindi(m[2]);
           }
