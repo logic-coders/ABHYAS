@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uploadPDF } from '@/lib/s3';
 import { v4 as uuidv4 } from 'uuid';
-
+import { getUser } from '@/lib/auth';
 /**
  * POST /api/upload-pdf
  * Accepts a multipart form upload with a PDF file.
@@ -10,11 +10,8 @@ import { v4 as uuidv4 } from 'uuid';
 export async function POST(request: Request) {
   try {
     // Check admin role
-    const authHeader = request.headers.get('cookie') || '';
-    const cookies = Object.fromEntries(authHeader.split('; ').map(c => c.split('=')));
-    const token = cookies['abhyas-token'];
-    
-    if (!token) {
+    const user = await getUser();
+    if (!user || user.role !== 'admin') {
        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { SafeUser, User } from './types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'abhyas-dev-secret-change-in-production';
@@ -87,3 +88,13 @@ export function toSafeUser(user: User): SafeUser {
 }
 
 export { COOKIE_NAME };
+
+/**
+ * Extract the current user using next/headers for Server Components.
+ */
+export async function getUser(): Promise<SafeUser | null> {
+  const cookieStore = cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+  return await verifyToken(token);
+}

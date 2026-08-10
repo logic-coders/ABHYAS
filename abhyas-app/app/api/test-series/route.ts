@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAllTestSeries, addTestSeries } from '@/lib/metadata-store';
 import { TestSeries, Subject } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { getUser } from '@/lib/auth';
 
 /**
  * GET /api/test-series
@@ -28,13 +29,9 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     // Check admin role
-    const authHeader = request.headers.get('cookie') || '';
-    const cookies = Object.fromEntries(authHeader.split('; ').map(c => c.split('=')));
-    const token = cookies['abhyas-token'];
+    const user = await getUser();
     
-    // Fallback simple validation without full JWT verify here, as middleware already blocks non-admins
-    // But it's good defense-in-depth or if middleware is bypassed
-    if (!token) {
+    if (!user || user.role !== 'admin') {
        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
