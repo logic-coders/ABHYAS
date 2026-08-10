@@ -1,3 +1,4 @@
+import pdfParse from 'pdf-parse';
 import { Question } from './types';
 import { decodeHindi } from './hindi-decode';
 
@@ -7,16 +8,7 @@ export type Language = 'en' | 'hi';
  * Extract raw text content from a PDF buffer.
  */
 export async function extractText(pdfBuffer: Buffer): Promise<string> {
-  // Polyfill DOMMatrix, ImageData, Path2D to prevent crash in Node.js for pdfjs-dist
-  if (typeof global !== 'undefined') {
-    (global as any).DOMMatrix = (global as any).DOMMatrix || class DOMMatrix {};
-    (global as any).ImageData = (global as any).ImageData || class ImageData {};
-    (global as any).Path2D = (global as any).Path2D || class Path2D {};
-  }
-  
-  const { PDFParse } = await import('pdf-parse');
-  const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
-  const result = await parser.getText();
+  const result = await pdfParse(pdfBuffer);
   let text = result.text ?? '';
   
   // Strip all instructions before the first PART section
