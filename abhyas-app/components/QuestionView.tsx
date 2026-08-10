@@ -15,7 +15,7 @@ export default function QuestionView({
 }: QuestionViewProps) {
   // Extract option letter from option text (e.g., "A. Paris" → "A")
   const getOptionLetter = (optionText: string): string => {
-    const match = optionText.match(/^[(\s]*([A-Da-d])[).:\s]/);
+    const match = optionText.match(/^[(\s]*([A-Ja-j])[).:\s]/);
     return match ? match[1].toUpperCase() : optionText.charAt(0).toUpperCase();
   };
 
@@ -43,7 +43,7 @@ export default function QuestionView({
               <span className={`option-letter ${isSelected ? 'letter-selected' : ''}`}>
                 {letter}
               </span>
-              <span className="option-text">{option.replace(/^[(\s]*[A-Da-d][).:\s]+\s*/, '')}</span>
+              <span className="option-text">{option.replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '')}</span>
               {isSelected && <span className="check-icon">✓</span>}
             </button>
           );

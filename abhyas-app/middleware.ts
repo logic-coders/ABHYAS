@@ -75,7 +75,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── All other routes require authentication ──
-  if (!user) {
+  if (!user && !pathname.startsWith("/api/exam")) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

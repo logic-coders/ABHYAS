@@ -1,5 +1,8 @@
 import { PDFParse } from 'pdf-parse';
 import { Question } from './types';
+import { decodeHindi } from './hindi-decode';
+
+export type Language = 'en' | 'hi';
 
 /**
  * Extract raw text content from a PDF buffer.
@@ -7,8 +10,51 @@ import { Question } from './types';
 export async function extractText(pdfBuffer: Buffer): Promise<string> {
   const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
   const result = await parser.getText();
-  return result.text ?? '';
+  let text = result.text ?? '';
+  
+  // Clean up common headers/footers
+  text = text.replace(/PART\s*-\s*[IVX]+\s*\n*\s*\([A-Z]+\)/gi, '');
+  text = text.replace(/PअRT\s*-\s*खखख\s*\n*\s*\(चणSखउ\)/gi, ''); // pre-decoded garbage just in case
+
+  // Remove page numbers like -- 21 of 46 -- or -- 21 ेष 46 --
+  text = text.replace(/--\s*\d+\s+(of|ेष)\s+\d+\s*--/gi, '');
+  
+  // Remove page footers like "22 12/MATH/M-2024-15/S-315-A" or "22 12/चअत/च-2024-15/S-315-ए"
+  // Usually starts with a number, space, number, slash, etc.
+  text = text.replace(/\n\s*\d+\s+\d+\/[^\n]+/g, '\n');
+  
+  return text;
 }
+
+/**
+ * Detect whether a text block is Hindi or English.
+ *
+ * The bilingual PDFs interleave English and Hindi on alternating pages:
+ *   English Q71-78, Hindi Q71-78, English Q79-86, Hindi Q79-86, etc.
+ *
+ * Hindi text in the parsed output often appears as:
+ * - Actual Devanagari Unicode characters (U+0900–U+097F)
+ * - "Garbled" transliterated characters from PDF encoding
+ *   (containing sequences with {, }, ¶, §, ©, ñ, etc.)
+ *
+ * We detect language per question block, not per section.
+ */
+function detectBlockLanguage(block: string): Language {
+  // Count Devanagari Unicode characters
+  const devanagariCount = (block.match(/[\u0900-\u097F]/g) || []).length;
+  if (devanagariCount > 3) return 'hi';
+
+  // Detect garbled Hindi encoding patterns common in these PDFs
+  // These characters appear frequently in the Hindi transliteration
+  const garbledPatterns = /[¶§©ñÎÌÐÊ{}'«»‹›‹ÝÞåæ¡¢£¤¥¦¨ª¬®¯°±²³µ·¸¹º¼½¾]|H\$|Am¡|Cn¶|'|\u003c\u003e/g;
+  const garbledCount = (block.match(garbledPatterns) || []).length;
+  
+  // If more than 5 garbled characters relative to block length, it's likely Hindi
+  if (garbledCount > 5 && garbledCount / block.length > 0.02) return 'hi';
+
+  return 'en';
+}
+
 
 /**
  * Parse questions (without answers) from PDF text in the given range.
@@ -27,13 +73,16 @@ export async function extractText(pdfBuffer: Buffer): Promise<string> {
  * The answer key section is expected after a line like:
  *   "Answer Key" or "Answers" or "ANSWER KEY"
  * Everything after that line is excluded from question parsing.
+ *
+ * @param language - 'en' for English, 'hi' for Hindi. Defaults to 'en'.
  */
 export function parseQuestions(
   text: string,
   start: number,
-  end: number
+  end: number,
+  language: Language = 'en'
 ): Question[] {
-  // Split off the answer key section if present
+  // Strip answer section
   const questionText = stripAnswerSection(text);
 
   const questions: Question[] = [];
@@ -50,19 +99,48 @@ export function parseQuestions(
     const block = match[2].trim();
     if (!block) continue;
 
+    // Detect language of this question block and filter
+    const blockLang = detectBlockLanguage(block);
+    if (blockLang !== language) continue;
+
     const parsed = parseQuestionBlock(num, block);
-    if (parsed) questions.push(parsed);
+    if (parsed) {
+      if (language === 'hi') {
+        parsed.text = decodeHindi(parsed.text);
+        parsed.options = parsed.options.map((o) => {
+          const m = o.match(/^([(\s]*[A-Ja-j][).:\s]+\s*)(.*)$/s);
+          if (m) {
+            return m[1] + decodeHindi(m[2]);
+          }
+          return decodeHindi(o);
+        });
+      }
+      questions.push(parsed);
+    }
   }
 
   // Sort by question number
   questions.sort((a, b) => a.number - b.number);
 
-  return questions;
+  // Deduplicate — keep only the first occurrence of each question number
+  const seen = new Set<number>();
+  const deduplicated: Question[] = [];
+  for (const q of questions) {
+    if (!seen.has(q.number)) {
+      seen.add(q.number);
+      deduplicated.push(q);
+    }
+  }
+
+  return deduplicated;
 }
 
 /**
  * Parse the answer key from the PDF text for the given question range.
  * Returns a map of questionNumber → correct option letter (e.g., "C").
+ *
+ * Answer keys are language-independent (just numbers and letters),
+ * so no language parameter is needed.
  *
  * Expected answer key formats:
  *   1. C      or     1) C     or     Q1. C    or    1. (C)   or   1 - C
@@ -81,9 +159,36 @@ export function parseAnswers(
     return parseInlineAnswers(text, start, end);
   }
 
-  // Match patterns like: 1. C, 1) C, Q1. C, 1 - C, 1. (C), 1.(C)
+  // Check if we have multiple sets in tabular format
+  const setHeaders = Array.from(answerSection.matchAll(/SET-([A-Z]) ANSWER KEY/gi));
+  if (setHeaders.length > 0) {
+    let targetSet = null;
+    const setMatch = text.match(/Booklet Series\s*([A-Z])/i) || text.match(/([A-Z])\s*Serial No\./i);
+    if (setMatch) {
+      targetSet = setMatch[1].toUpperCase();
+    }
+    if (!targetSet) targetSet = setHeaders[0][1].toUpperCase();
+
+    const targetSetIndex = setHeaders.findIndex(h => h[1].toUpperCase() === targetSet);
+    if (targetSetIndex !== -1) {
+      const lines = answerSection.split('\n');
+      for (const line of lines) {
+        const pairs = Array.from(line.matchAll(/\b(\d+)\s+([A-Ea-e])\b/g));
+        if (pairs.length > targetSetIndex) {
+          const pair = pairs[targetSetIndex];
+          const num = parseInt(pair[1], 10);
+          if (num >= start && num <= end) {
+            answers.set(num, pair[2].toUpperCase());
+          }
+        }
+      }
+      if (answers.size > 0) return answers;
+    }
+  }
+
+  // Match patterns like: 1. C, 1) C, Q1. C, 1 - C, 1. (C), 1.(C), 1 C
   const answerRegex =
-    /(?:Q(?:uestion)?\s*\.?\s*)?(\d+)\s*[.):\-–]\s*\(?([A-Da-d])\)?/gi;
+    /(?:Q(?:uestion)?\s*\.?\s*)?(\d+)\s*[.):\-–\s]+\s*\(?([A-Ea-e])\)?/gi;
 
   let match: RegExpExecArray | null;
   while ((match = answerRegex.exec(answerSection)) !== null) {
@@ -140,8 +245,8 @@ function findAnswerKeyIndex(text: string): number {
  * The block contains the question text followed by options A–D.
  */
 function parseQuestionBlock(num: number, block: string): Question | null {
-  // Try to split out options: A., A), (A), a., a) etc.
-  const optionRegex = /\(?([A-Da-d])\)?\s*[.):\s]\s*/g;
+  // Try to split out options: A., A), (A), a., a) etc. (up to 10 options, A-J)
+  const optionRegex = /(?<=\s|^)\(?([A-Ja-j])\)?\s*[.):]\s+/g;
 
   // Find all option positions
   const optionPositions: { letter: string; index: number }[] = [];
@@ -172,7 +277,17 @@ function parseQuestionBlock(num: number, block: string): Question | null {
       i + 1 < optionPositions.length
         ? optionPositions[i + 1].index
         : block.length;
-    const optionText = block.substring(start, end).trim();
+    let optionText = block.substring(start, end).trim();
+
+    // Remove trailing answer key section or garbage footers if accidentally included
+    const garbageKeywords = ['ANSWER KEY', 'SPACE FOR ROUGH', 'SPअउए FजR', 'रμ’$', 'प्रíन-पुpस्तका', 'महÎवपूर्ण अनुदेश>'];
+    for (const kw of garbageKeywords) {
+      const idx = optionText.indexOf(kw);
+      if (idx !== -1) {
+        optionText = optionText.substring(0, idx).trim();
+      }
+    }
+
     options.push(optionText);
   }
 

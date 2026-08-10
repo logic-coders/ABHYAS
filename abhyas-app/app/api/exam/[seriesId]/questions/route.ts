@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getTestSeriesById } from '@/lib/metadata-store';
 import { downloadPDF } from '@/lib/s3';
-import { extractText, parseQuestions } from '@/lib/pdf-parser';
+import { extractText, parseQuestions, Language } from '@/lib/pdf-parser';
 
 /**
- * GET /api/exam/[seriesId]/questions
+ * GET /api/exam/[seriesId]/questions?lang=en|hi
  * Fetches the test series PDF from S3, parses questions in the defined range,
  * and returns them WITHOUT answers.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ seriesId: string }> }
 ) {
   try {
@@ -22,6 +22,10 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Read language from query parameter (default: 'en')
+    const url = new URL(request.url);
+    const lang = (url.searchParams.get('lang') || 'en') as Language;
 
     let questions = [];
 
@@ -42,7 +46,7 @@ export async function GET(
         // Find min and max for this PDF to parse efficiently
         const start = Math.min(...nums);
         const end = Math.max(...nums);
-        const parsed = parseQuestions(text, start, end);
+        const parsed = parseQuestions(text, start, end, lang);
         // Filter only the randomly selected ones
         const requiredSet = new Set(nums);
         return parsed.filter(q => requiredSet.has(q.number));
@@ -57,7 +61,7 @@ export async function GET(
       // Regular single-PDF test series
       const pdfBuffer = await downloadPDF(series.s3Key);
       const text = await extractText(pdfBuffer);
-      questions = parseQuestions(text, series.startQuestion, series.endQuestion);
+      questions = parseQuestions(text, series.startQuestion, series.endQuestion, lang);
     }
 
     if (questions.length === 0) {

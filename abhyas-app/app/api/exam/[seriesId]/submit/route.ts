@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTestSeriesById } from '@/lib/metadata-store';
 import { downloadPDF } from '@/lib/s3';
-import { extractText, parseQuestions, parseAnswers } from '@/lib/pdf-parser';
+import { extractText, parseQuestions, parseAnswers, Language } from '@/lib/pdf-parser';
 import { ExamAnswer, ExamResult, ResultItem } from '@/lib/types';
 import { addResult } from '@/lib/result-store';
 import { getCurrentUser } from '@/lib/auth';
@@ -13,7 +13,7 @@ import { NextRequest } from 'next/server';
  * Receives the user's answers, re-parses the PDF for correct answers,
  * and returns a scored result.
  *
- * Body: { answers: ExamAnswer[] }
+ * Body: { answers: ExamAnswer[], lang?: 'en' | 'hi' }
  */
 export async function POST(
   request: NextRequest,
@@ -32,6 +32,7 @@ export async function POST(
 
     const body = await request.json();
     const userAnswers: ExamAnswer[] = body.answers;
+    const lang: Language = body.lang || 'en';
 
     if (!Array.isArray(userAnswers)) {
       return NextResponse.json(
@@ -58,7 +59,7 @@ export async function POST(
         const text = await extractText(pdfBuffer);
         const start = Math.min(...nums);
         const end = Math.max(...nums);
-        const parsed = parseQuestions(text, start, end);
+        const parsed = parseQuestions(text, start, end, lang);
         const parsedAns = parseAnswers(text, start, end);
         const requiredSet = new Set(nums);
         
@@ -91,7 +92,7 @@ export async function POST(
       const pdfBuffer = await downloadPDF(series.s3Key);
       const text = await extractText(pdfBuffer);
       correctAnswers = parseAnswers(text, series.startQuestion, series.endQuestion);
-      questions = parseQuestions(text, series.startQuestion, series.endQuestion);
+      questions = parseQuestions(text, series.startQuestion, series.endQuestion, lang);
     }
 
     // Build a lookup for user answers

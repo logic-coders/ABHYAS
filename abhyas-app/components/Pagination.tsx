@@ -8,6 +8,8 @@ interface PaginationProps {
   onSubmit: () => void;
   isSubmitting: boolean;
   answeredCount: number;
+  onClearResponse: () => void;
+  onMarkForReview: () => void;
 }
 
 export default function Pagination({
@@ -18,6 +20,8 @@ export default function Pagination({
   onSubmit,
   isSubmitting,
   answeredCount,
+  onClearResponse,
+  onMarkForReview,
 }: PaginationProps) {
   const isFirst = current === 0;
   const isLast = current === total - 1;
@@ -52,25 +56,41 @@ export default function Pagination({
           ← Previous
         </button>
 
-        {isLast ? (
-          <button
-            className="btn btn-primary btn-lg"
-            onClick={onSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <span className="spinner" /> Scoring...
-              </>
-            ) : (
-              '✓ Submit Exam'
-            )}
+        <div className="action-buttons">
+          <button className="btn btn-ghost clear-btn" onClick={onClearResponse}>
+            Clear Response
           </button>
-        ) : (
-          <button className="btn btn-primary" onClick={onNext}>
-            Next →
-          </button>
-        )}
+          
+          {isLast ? (
+            <>
+              <button className="btn btn-secondary review-btn" onClick={onMarkForReview}>
+                Mark for Review
+              </button>
+              <button
+                className="btn btn-primary btn-lg"
+                onClick={onSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="spinner" /> Scoring...
+                  </>
+                ) : (
+                  '✓ Submit Exam'
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn btn-secondary review-btn" onClick={onMarkForReview}>
+                Mark for Review & Next
+              </button>
+              <button className="btn btn-primary" onClick={onNext}>
+                Save & Next →
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <style jsx>{`
@@ -120,12 +140,43 @@ export default function Pagination({
           gap: 1rem;
         }
 
-        @media (max-width: 480px) {
+        .action-buttons {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .clear-btn {
+          color: var(--text-muted);
+        }
+
+        .clear-btn:hover {
+          color: var(--color-incorrect);
+        }
+
+        .review-btn {
+          background: rgba(168, 85, 247, 0.1);
+          color: #a855f7;
+          border-color: rgba(168, 85, 247, 0.3);
+        }
+
+        .review-btn:hover {
+          background: rgba(168, 85, 247, 0.2);
+          border-color: #a855f7;
+        }
+
+        @media (max-width: 768px) {
           .pagination-nav {
             flex-direction: column;
           }
 
-          .pagination-nav .btn {
+          .action-buttons {
+            flex-direction: column;
+            width: 100%;
+          }
+
+          .pagination-nav .btn,
+          .action-buttons .btn {
             width: 100%;
           }
         }
