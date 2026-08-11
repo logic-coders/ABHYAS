@@ -9,6 +9,8 @@ import QuestionView from '@/components/QuestionView';
 import QuestionNavigator from '@/components/QuestionNavigator';
 import Pagination from '@/components/Pagination';
 import ResultModal from '@/components/ResultModal';
+import DisclaimerModal from '@/components/DisclaimerModal';
+import ExamTimer from '@/components/ExamTimer';
 
 interface ExamData {
   seriesId: string;
@@ -25,6 +27,10 @@ export default function ExamPage() {
 
   // Language selection
   const [language, setLanguage] = useState<Language | null>(null);
+  
+  // Disclaimer
+  const [hasAcceptedDisclaimer, setHasAcceptedDisclaimer] = useState(false);
+  const [isTimeUp, setIsTimeUp] = useState(false);
 
   // Exam state
   const [examData, setExamData] = useState<ExamData | null>(null);
@@ -80,29 +86,30 @@ export default function ExamPage() {
 
   const handleSelect = useCallback(
     (option: string) => {
-      if (!examData) return;
+      if (!examData || isTimeUp || isSubmitting) return;
       const question = examData.questions[currentIndex];
       setAnswers((prev) => ({ ...prev, [question.number]: option }));
     },
-    [examData, currentIndex]
+    [examData, currentIndex, isTimeUp, isSubmitting]
   );
 
   const handleNavigate = useCallback((index: number) => {
+    if (isTimeUp || isSubmitting) return;
     setCurrentIndex(index);
-  }, []);
+  }, [isTimeUp, isSubmitting]);
 
   const handleClearResponse = useCallback(() => {
-    if (!examData) return;
+    if (!examData || isTimeUp || isSubmitting) return;
     const question = examData.questions[currentIndex];
     setAnswers((prev) => {
       const next = { ...prev };
       delete next[question.number];
       return next;
     });
-  }, [examData, currentIndex]);
+  }, [examData, currentIndex, isTimeUp, isSubmitting]);
 
   const handleMarkForReview = useCallback(() => {
-    if (!examData) return;
+    if (!examData || isTimeUp || isSubmitting) return;
     const question = examData.questions[currentIndex];
     setMarkedForReview((prev) => {
       const next = new Set(prev);
@@ -113,10 +120,10 @@ export default function ExamPage() {
     if (currentIndex < examData.questions.length - 1) {
       setCurrentIndex((i) => i + 1);
     }
-  }, [examData, currentIndex]);
+  }, [examData, currentIndex, isTimeUp, isSubmitting]);
 
   const handleSubmit = async () => {
-    if (!examData) return;
+    if (!examData || isSubmitting) return;
     setIsSubmitting(true);
 
     try {
@@ -154,6 +161,13 @@ export default function ExamPage() {
     }
   };
 
+  const handleTimeUp = useCallback(() => {
+    setIsTimeUp(true);
+    if (!examResult) {
+      handleSubmit();
+    }
+  }, [examResult, handleSubmit]);
+
   // ── Language Selection ──
   if (!language) {
     return <LanguageSelector onSelect={(lang) => setLanguage(lang)} />;
@@ -190,6 +204,16 @@ export default function ExamPage() {
     );
   }
 
+  // ── Disclaimer ──
+  if (!hasAcceptedDisclaimer) {
+    return (
+      <DisclaimerModal
+        onAccept={() => setHasAcceptedDisclaimer(true)}
+        onCancel={() => router.push('/')}
+      />
+    );
+  }
+
   const currentQuestion = examData.questions[currentIndex];
   const answeredCount = Object.keys(answers).length;
 
@@ -210,6 +234,9 @@ export default function ExamPage() {
                 <span className="lang-badge">
                   {language === 'en' ? '🇬🇧 EN' : '🇮🇳 हि'}
                 </span>
+              </div>
+              <div style={{ marginLeft: 'auto' }}>
+                <ExamTimer seriesId={seriesId} onTimeUp={handleTimeUp} />
               </div>
             </div>
 
