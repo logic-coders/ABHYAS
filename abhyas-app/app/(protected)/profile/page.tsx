@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyToken, COOKIE_NAME } from '@/lib/auth';
-import { getResultsByUser } from '@/lib/result-store';
-import ProfileHistory from '@/components/ProfileHistory';
 
 export default async function ProfilePage() {
   const cookieStore = await cookies();
@@ -13,21 +11,30 @@ export default async function ProfilePage() {
     redirect('/login');
   }
 
-  const results = await getResultsByUser(user.id);
-
   return (
-    <div className="container" style={{ padding: '2rem' }}>
-      <div className="glass-card" style={{ padding: '2rem', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>User Profile</h1>
-        <div style={{ display: 'grid', gap: '0.5rem' }}>
-          <p><strong>Name:</strong> {user.name}</p>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Role:</strong> <span style={{ textTransform: 'capitalize' }}>{user.role}</span></p>
+    <div className="container page-wrapper">
+      <div className="glass-card" style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
+        <h1 style={{ fontSize: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>Profile Information</h1>
+        
+        <div style={{ display: 'grid', gap: '1rem', fontSize: '1.1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr' }}>
+            <strong style={{ color: 'var(--text-secondary)' }}>Name:</strong>
+            <span>{user.name}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr' }}>
+            <strong style={{ color: 'var(--text-secondary)' }}>Email:</strong>
+            <span>{user.email}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr' }}>
+            <strong style={{ color: 'var(--text-secondary)' }}>Role:</strong>
+            <span>
+              <span className="role-tag" style={{ fontSize: '0.8rem', padding: '0.2rem 0.6rem' }}>
+                {user.role}
+              </span>
+            </span>
+          </div>
         </div>
       </div>
-
-      <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Test History</h2>
-      <ProfileHistory results={results} />
     </div>
   );
 }

@@ -366,6 +366,19 @@ export default function ExamPage() {
           .exam-layout {
             grid-template-columns: 1fr;
           }
+          
+          .exam-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            margin-top: -1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-subtle);
+          }
         }
       `}</style>
     </>
