@@ -11,7 +11,9 @@ interface TestSeriesCardProps {
 export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
   const subjectColor = SUBJECT_COLORS[series.subject];
   const icon = SUBJECT_ICONS[series.subject];
-  const questionCount = series.endQuestion - series.startQuestion + 1;
+  const questionCount = series.isRandom
+    ? (series.randomQuestions?.length || 80)
+    : (series.endQuestion - series.startQuestion + 1);
 
   return (
     <Link href={`/exam/${series.id}`} className="card-link">
@@ -48,10 +50,10 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
         {/* Meta */}
         <div className="card-meta">
           <span className="meta-item">
-            📋 {questionCount} question{questionCount !== 1 ? 's' : ''}
+            📋 {questionCount} questions
           </span>
           <span className="meta-item">
-            Q{series.startQuestion} – Q{series.endQuestion}
+            ⏱️ 1h 20m
           </span>
         </div>
 

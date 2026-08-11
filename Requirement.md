@@ -173,6 +173,21 @@ Admin creates a **Test Series** by filling in:
 - **Bug:** Result Page shows original PDF question numbers.
 - **Expected behavior:** Result Page must display questions numbered sequentially starting from 1.
 
+### Fix 16 — Strip "[P.T.O." Artifacts
+- **Bug:** Print-layout continuation markers (like `[P.T.O.`, `P.T.O.`, `[P.T.O]`) from source PDFs leak into extracted option text or question text.
+- **Expected behavior:** Strip all `P.T.O.` markers from question and option text during PDF parsing.
+
+### Fix 17 — Fix Metadata for Generated Random Tests
+- **Bug:** Landing page cards for generated random tests display "1 question, Q0–Q0" instead of "80 questions".
+- **Expected behavior:** When generating random tests, correctly store metadata with `totalQuestions: 80` (or actual count).
+
+### Fix 18 — Hide Internal PDF Question Range (Q71–Q150) from Cards
+- **Bug:** Landing page test series cards display raw PDF question ranges like "Q71–Q150" or "Q0–Q0".
+- **Expected behavior:** Hide internal PDF question numbers from test cards — display only user-facing info like "80 Questions".
+
+### Fix 19 — Vercel Toolbar
+- **Note:** Vercel toolbar is disabled via Vercel Dashboard project settings.
+
 ## Phase V
 
 ### 14. Sequential Question Numbering (Display)

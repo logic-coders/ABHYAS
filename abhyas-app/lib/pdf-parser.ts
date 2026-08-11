@@ -286,15 +286,18 @@ function parseQuestionBlock(num: number, block: string): Question | null {
         : block.length;
     let optionText = block.substring(start, end).trim();
 
-    // Remove trailing answer key section or garbage footers if accidentally included
+    // Remove trailing answer key section, P.T.O markers or garbage footers if accidentally included
+    optionText = optionText.replace(/\[?\s*P\.?\s*T\.?\s*O\.?\s*\]?/gi, '');
     optionText = optionText.replace(/(\b(?:answer key|space for rough|rough work|रफ कार्य|SPअउए FजR|रμ’\$|प्रíन-पुpस्तका|महÎवपूर्ण अनुदेश>).*)[\s\S]*/i, '').trim();
 
     options.push(optionText);
   }
 
+  const cleanedQuestionText = questionText.replace(/\[?\s*P\.?\s*T\.?\s*O\.?\s*\]?/gi, '').trim();
+
   return {
     number: num,
-    text: questionText,
+    text: cleanedQuestionText,
     options,
   };
 }

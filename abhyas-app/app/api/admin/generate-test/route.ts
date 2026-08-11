@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
       title: `Random ${subject} Test - ${new Date().toLocaleDateString()}`,
       subject: subject as Subject,
       s3Key: '', // N/A for random tests
-      startQuestion: 0,
-      endQuestion: 0,
+      startQuestion: 1,
+      endQuestion: selectedQuestions.length,
       createdAt: new Date().toISOString(),
       isRandom: true,
       randomQuestions: selectedQuestions,
