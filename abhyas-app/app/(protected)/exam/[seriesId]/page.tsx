@@ -148,6 +148,11 @@ export default function ExamPage() {
 
       const result: ExamResult = await res.json();
 
+      // Exit fullscreen mode upon submitting test
+      if (typeof document !== 'undefined' && document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+
       // Store result in sessionStorage for the detailed result page
       sessionStorage.setItem(`result-${seriesId}`, JSON.stringify(result));
 

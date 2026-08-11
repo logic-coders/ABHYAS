@@ -14,6 +14,11 @@ export default function ResultModal({ result, onClose }: ResultModalProps) {
   const [showScore, setShowScore] = useState(false);
 
   useEffect(() => {
+    // Auto-disable fullscreen when result modal mounts
+    if (typeof document !== 'undefined' && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+
     // Trigger score animation after modal mounts
     const timer = setTimeout(() => setShowScore(true), 400);
     // Prevent body scroll
