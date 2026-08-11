@@ -15,6 +15,9 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
     ? (series.randomQuestions?.length || 80)
     : (series.endQuestion - series.startQuestion + 1);
 
+  // Strip any trailing date strings (e.g. "- 8/10/2026") from title
+  const cleanTitle = series.title.replace(/\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}/, '');
+
   return (
     <Link href={`/exam/${series.id}`} className="card-link">
       <div
@@ -45,7 +48,7 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
         </div>
 
         {/* Title */}
-        <h3 className="card-title">{series.title}</h3>
+        <h3 className="card-title">{cleanTitle}</h3>
 
         {/* Meta */}
         <div className="card-meta">
