@@ -80,14 +80,27 @@ export default function Header() {
                     
                     {dropdownOpen && (
                       <div className="dropdown-menu">
+                        <div className="dropdown-header">
+                          <span className="dropdown-header-avatar">
+                            {user.name.charAt(0).toUpperCase()}
+                          </span>
+                          <div className="dropdown-user-info">
+                            <span className="dropdown-username">{user.name}</span>
+                            <span className="dropdown-email">{user.email}</span>
+                          </div>
+                        </div>
+                        <div className="dropdown-divider"></div>
                         <Link href="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                          <svg className="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                           Profile
                         </Link>
                         <Link href="/test-history" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                          <svg className="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                           Test History
                         </Link>
                         <div className="dropdown-divider"></div>
                         <button className="dropdown-item logout-btn" onClick={() => { setDropdownOpen(false); logout(); }}>
+                          <svg className="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                           Logout
                         </button>
                       </div>
@@ -151,18 +164,62 @@ export default function Header() {
           top: 100%;
           right: 0;
           margin-top: 0.5rem;
-          width: 180px;
+          width: 220px;
           background: var(--bg-card);
           border: 1px solid var(--border-medium);
           border-radius: var(--radius-md);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          box-shadow: var(--shadow-md);
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
           display: flex;
           flex-direction: column;
           padding: 0.5rem 0;
           z-index: 200;
           animation: slideInDown 0.2s ease forwards;
+        }
+
+        .dropdown-header {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem 1rem;
+        }
+
+        .dropdown-header-avatar {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 2.5rem;
+          height: 2.5rem;
+          font-size: 1rem;
+          font-weight: 700;
+          color: #fff;
+          background: var(--accent-gradient);
+          border-radius: var(--radius-full);
+          flex-shrink: 0;
+        }
+
+        .dropdown-user-info {
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .dropdown-username {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: var(--text-primary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .dropdown-email {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         
         @keyframes slideInDown {
@@ -171,7 +228,10 @@ export default function Header() {
         }
 
         .dropdown-item {
-          padding: 0.5rem 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.6rem 1rem;
           font-size: 0.9rem;
           color: var(--text-primary);
           text-decoration: none;
@@ -183,8 +243,17 @@ export default function Header() {
           transition: background 0.2s ease;
         }
 
+        .dropdown-icon {
+          color: var(--text-muted);
+          flex-shrink: 0;
+        }
+
         .dropdown-item:hover {
           background: var(--bg-glass-strong);
+        }
+        
+        .dropdown-item:hover .dropdown-icon {
+          color: var(--text-primary);
         }
         
         .dropdown-divider {
@@ -196,8 +265,15 @@ export default function Header() {
         .logout-btn {
           color: var(--color-incorrect);
         }
+        .logout-btn .dropdown-icon {
+          color: var(--color-incorrect);
+        }
         .logout-btn:hover {
           background: var(--color-incorrect-bg);
+          color: #fff;
+        }
+        .logout-btn:hover .dropdown-icon {
+          color: #fff;
         }
 
         .user-name {
