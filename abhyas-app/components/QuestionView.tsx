@@ -4,12 +4,14 @@ import { Question } from '@/lib/types';
 
 interface QuestionViewProps {
   question: Question;
+  displayNumber: number;
   selectedOption: string;
   onSelect: (option: string) => void;
 }
 
 export default function QuestionView({
   question,
+  displayNumber,
   selectedOption,
   onSelect,
 }: QuestionViewProps) {
@@ -23,7 +25,7 @@ export default function QuestionView({
     <div className="question-view">
       {/* Question Number & Text */}
       <div className="question-header">
-        <span className="question-number">Q{question.number}</span>
+        <span className="question-number">Q{displayNumber}</span>
         <h2 className="question-text">{question.text}</h2>
       </div>
 

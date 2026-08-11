@@ -216,6 +216,7 @@ export default function ExamPage() {
             {/* Question */}
             <QuestionView
               question={currentQuestion}
+              displayNumber={currentIndex + 1}
               selectedOption={answers[currentQuestion.number] || ''}
               onSelect={handleSelect}
             />

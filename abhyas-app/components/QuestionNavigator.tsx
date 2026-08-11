@@ -75,9 +75,9 @@ export default function QuestionNavigator({
                   if (window.innerWidth <= 768) setIsExpanded(false);
                 }}
                 type="button"
-                title={`Question ${q.number}`}
+                title={`Question ${idx + 1}`}
               >
-                {q.number}
+                {idx + 1}
               </button>
             );
           })}
@@ -136,9 +136,9 @@ export default function QuestionNavigator({
                       if (window.innerWidth <= 768) setIsExpanded(false);
                     }}
                     type="button"
-                    title={`Question ${q.number}`}
+                    title={`Question ${idx + 1}`}
                   >
-                    {q.number}
+                    {idx + 1}
                   </button>
                 );
               })}
