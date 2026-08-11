@@ -79,24 +79,22 @@ export default function Header() {
                             {user.name.charAt(0).toUpperCase()}
                           </span>
                           <div className="dropdown-user-info">
-                            <span className="dropdown-username">
-                              {user.name} <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85em' }}>- {user.role.toUpperCase()}</span>
-                            </span>
-                            <span className="dropdown-email">{user.email}</span>
+                            <span className="dropdown-username">{user.name}</span>
+                            <span className="dropdown-role">{user.role.toUpperCase()}</span>
                           </div>
                         </div>
                         <div className="dropdown-divider"></div>
                         <Link href="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                          <svg className="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                          <svg className="dropdown-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                           Profile
                         </Link>
                         <Link href="/test-history" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                          <svg className="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                          <svg className="dropdown-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                           Test History
                         </Link>
                         <div className="dropdown-divider"></div>
                         <button className="dropdown-item logout-btn" onClick={() => { setDropdownOpen(false); logout(); }}>
-                          <svg className="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                          <svg className="dropdown-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                           Logout
                         </button>
                       </div>
@@ -160,7 +158,7 @@ export default function Header() {
           top: 100%;
           right: 0;
           margin-top: 0.5rem;
-          width: 280px;
+          width: 250px;
           background: #111115;
           border: 1px solid var(--border-medium);
           border-radius: var(--radius-md);
@@ -197,7 +195,7 @@ export default function Header() {
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          line-height: 1.3;
+          line-height: 1.4;
         }
 
         .dropdown-username {
@@ -209,9 +207,11 @@ export default function Header() {
           text-overflow: ellipsis;
         }
 
-        .dropdown-email {
-          font-size: 0.85rem;
-          color: #9ca3af;
+        .dropdown-role {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: var(--accent-light);
+          letter-spacing: 0.05em;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -225,9 +225,9 @@ export default function Header() {
         .dropdown-item {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
-          padding: 0.65rem 1rem;
-          font-size: 0.95rem;
+          gap: 1rem;
+          padding: 0.75rem 1rem;
+          font-size: 1.02rem;
           font-weight: 500;
           color: #e5e7eb;
           text-decoration: none;
