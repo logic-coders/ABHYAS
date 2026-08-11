@@ -165,7 +165,8 @@ export default function Header() {
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
           display: flex;
           flex-direction: column;
-          padding: 0.5rem 0;
+          gap: 0.2rem;
+          padding: 0.6rem 0;
           z-index: 200;
           animation: slideInDown 0.2s ease forwards;
         }
@@ -174,7 +175,7 @@ export default function Header() {
           display: flex;
           align-items: center;
           gap: 0.85rem;
-          padding: 0.85rem 1rem;
+          padding: 0.85rem 1.25rem;
         }
 
         .dropdown-header-avatar {
@@ -225,8 +226,8 @@ export default function Header() {
         .dropdown-item {
           display: flex;
           align-items: center;
-          gap: 1rem;
-          padding: 0.75rem 1rem;
+          gap: 0.85rem;
+          padding: 0.7rem 1.25rem;
           font-size: 1.02rem;
           font-weight: 500;
           color: #e5e7eb;
@@ -246,7 +247,7 @@ export default function Header() {
         }
 
         .dropdown-item:hover {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(255, 255, 255, 0.06);
           color: #fff;
         }
         
@@ -257,7 +258,7 @@ export default function Header() {
         .dropdown-divider {
           height: 1px;
           background: var(--border-medium);
-          margin: 0.5rem 0;
+          margin: 0.3rem 0;
         }
         
         .logout-btn {
