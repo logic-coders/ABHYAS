@@ -48,6 +48,7 @@ async function main() {
     email: email.toLowerCase(),
     passwordHash,
     role: 'admin',
+    accountStatus: 'APPROVED',
     createdAt: new Date().toISOString(),
   };
 

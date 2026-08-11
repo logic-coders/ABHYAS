@@ -74,4 +74,14 @@ export async function getUserCounts(): Promise<{ admins: number; users: number; 
   return { admins, users, total: all.length };
 }
 
+export async function updateUserStatus(userId: string, status: User['accountStatus']): Promise<void> {
+  const all = await getAllUsers();
+  const index = all.findIndex(u => u.id === userId);
+  if (index === -1) {
+    throw new Error('User not found');
+  }
+  all[index].accountStatus = status;
+  await uploadJSON(USERS_KEY, all);
+}
+
 export { MAX_USERS, MAX_ADMINS };

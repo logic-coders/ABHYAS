@@ -65,6 +65,53 @@ Admin creates a **Test Series** by filling in:
   - **User Dashboard** — access to the Landing Page (browse test series), take exams, and view their own past results.
 - Access control ensures normal users cannot reach admin-only actions (e.g., PDF upload, test series creation), and vice versa keeps the experience role-appropriate.
 
+## Phase III — User Profiles & Security
+
+### 7. Profile Dashboard
+- Users have a Profile Dashboard where they can view their test history (past attempts and scores).
+
+### 8. Admin Whitelist
+- Ensure only specific, whitelisted emails or designated accounts can register as Admin or access Admin functionality.
+
+## Phase IV — Core Exam Flow Improvements
+
+### 11. PDF Answer Mapping
+- Fix/improve how answers are mapped from the original PDF numbers to the test logic, ensuring correct answer lookup.
+
+### 13. Manual Submit & Result View
+- Users can manually submit the test.
+- Post-submission, a result page shows the final score and a breakdown of correct/incorrect answers.
+
+## Phase V
+
+### 14. Sequential Question Numbering (Display)
+- Regardless of the original question numbers in the source PDF (e.g., PDF questions 71–150), the test UI must display questions numbered sequentially starting from 1 (i.e., Question 1, Question 2, ... Question 80 for an 80-question test).
+- Internally, the app maps each displayed number back to its actual PDF question number (needed for correct answer lookup), but user-facing numbering always starts at 1.
+
+### 15. Admin Approval for New User Registrations
+- When a new user registers, their account is created in a Pending Approval state — they cannot log in yet.
+- The registration request is routed to the Admin.
+- Admin can Approve or Reject each pending registration from the Admin Dashboard.
+- Only after Approval can that user successfully log in; a Rejected user remains unable to log in (show a clear message if they try).
+
+### 16. Disclaimer Popup After Language Selection
+- Immediately after the user selects a language (English/Hindi) to start a test, a disclaimer popup is shown before the test begins, covering the following rules:
+  - The timer starts as soon as the test begins.
+  - Once time is up, the user cannot interact further with the test (no answering, navigating, or changing answers).
+  - Time limit: 1 hour 20 minutes per test.
+  - When the timer reaches 0, the test is automatically submitted.
+- User must acknowledge/close this popup to proceed into the actual test.
+
+### 17. Persistent Test Timer
+- A countdown timer must be visible at all times on the Exam Page (e.g., fixed in a header/corner), regardless of which question the user is currently viewing.
+- Timer counts down from 1:20:00 (1 hour 20 minutes) and updates in real time.
+- On reaching 0:00, the test is auto-submitted immediately, following the same Submit flow as a manual submission — including showing the result popup and updating the Profile Dashboard.
+- Once time expires, all test interactions (option selection, navigation) must be disabled/locked.
+
+### 18. Detailed Result View from Profile Page
+- On the Profile Dashboard, clicking on a specific past test from the user's test history opens a detailed result view for that attempt.
+- This detailed view matches the same post-submission result page shown right after submitting a test — showing the full question-by-question breakdown of correct vs. incorrect answers, not just the summary score.
+
 ## Tech Stack
 _(To be filled in — e.g., Frontend framework, Backend, Database, Hosting)_
 

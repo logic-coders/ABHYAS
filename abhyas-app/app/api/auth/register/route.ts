@@ -55,19 +55,19 @@ export async function POST(request: Request) {
       email: email.toLowerCase().trim(),
       passwordHash,
       role: 'user', // Always 'user' — admins are seeded via CLI
+      accountStatus: 'PENDING',
       createdAt: new Date().toISOString(),
     };
 
     await addUser(user);
 
-    // Auto-login after registration
+    // No auto-login since account is PENDING
     const safeUser = toSafeUser(user);
-    const token = await createToken(safeUser);
 
-    const response = NextResponse.json({ user: safeUser }, { status: 201 });
-    setAuthCookie(response, token);
-
-    return response;
+    return NextResponse.json(
+      { message: 'Registration successful. Account pending admin approval.', user: safeUser },
+      { status: 201 }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Registration failed';
     console.error('Registration error:', message);

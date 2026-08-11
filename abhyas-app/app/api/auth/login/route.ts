@@ -38,6 +38,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check account status
+    const status = user.accountStatus || 'PENDING';
+    if (status === 'PENDING') {
+      return NextResponse.json(
+        { error: 'Your account is pending admin approval' },
+        { status: 403 }
+      );
+    }
+    if (status === 'REJECTED') {
+      return NextResponse.json(
+        { error: 'Your account registration was rejected' },
+        { status: 403 }
+      );
+    }
+
     // Create token & set cookie
     const safeUser = toSafeUser(user);
     const token = await createToken(safeUser);

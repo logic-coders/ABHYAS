@@ -70,6 +70,7 @@ export interface ExamResult {
 /* ─── Phase II: Authentication types ─── */
 
 export type UserRole = 'admin' | 'user';
+export type AccountStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 /** Full user record stored in S3 (includes password hash) */
 export interface User {
@@ -78,6 +79,7 @@ export interface User {
   email: string;
   passwordHash: string;
   role: UserRole;
+  accountStatus: AccountStatus;
   createdAt: string; // ISO date string
 }
 
@@ -87,4 +89,5 @@ export interface SafeUser {
   name: string;
   email: string;
   role: UserRole;
+  accountStatus: AccountStatus;
 }

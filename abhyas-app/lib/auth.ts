@@ -33,6 +33,7 @@ export async function verifyToken(token: string): Promise<SafeUser | null> {
       name: payload.name as string,
       email: payload.email as string,
       role: payload.role as 'admin' | 'user',
+      accountStatus: payload.accountStatus as 'PENDING' | 'APPROVED' | 'REJECTED',
     };
   } catch (err) {
     console.error("verifyToken error:", err);
@@ -84,6 +85,7 @@ export function toSafeUser(user: User): SafeUser {
     name: user.name,
     email: user.email,
     role,
+    accountStatus: user.accountStatus || 'PENDING',
   };
 }
 
