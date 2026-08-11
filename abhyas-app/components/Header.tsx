@@ -1,10 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 
 export default function Header() {
+  const pathname = usePathname();
   const { user, isLoading, logout } = useAuth();
+
+  // Hide global header on exam pages for distraction-free exam mode
+  if (pathname?.startsWith('/exam')) {
+    return null;
+  }
 
   return (
     <header className="header">
