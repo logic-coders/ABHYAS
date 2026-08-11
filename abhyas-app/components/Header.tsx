@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useState, useRef, useEffect } from 'react';
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isLoading, logout } = useAuth();
   
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -84,16 +85,37 @@ export default function Header() {
                           </div>
                         </div>
                         <div className="dropdown-divider"></div>
-                        <Link href="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                        <button
+                          type="button"
+                          className="dropdown-item"
+                          onClick={() => {
+                            setDropdownOpen(false);
+                            router.push('/profile');
+                          }}
+                        >
                           <svg className="dropdown-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                           <span>Profile</span>
-                        </Link>
-                        <Link href="/test-history" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                        </button>
+                        <button
+                          type="button"
+                          className="dropdown-item"
+                          onClick={() => {
+                            setDropdownOpen(false);
+                            router.push('/test-history');
+                          }}
+                        >
                           <svg className="dropdown-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                           <span>Test History</span>
-                        </Link>
+                        </button>
                         <div className="dropdown-divider"></div>
-                        <button className="dropdown-item logout-btn" onClick={() => { setDropdownOpen(false); logout(); }}>
+                        <button
+                          type="button"
+                          className="dropdown-item logout-btn"
+                          onClick={() => {
+                            setDropdownOpen(false);
+                            logout();
+                          }}
+                        >
                           <svg className="dropdown-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                           <span>Logout</span>
                         </button>
