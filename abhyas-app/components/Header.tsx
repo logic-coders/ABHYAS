@@ -48,12 +48,14 @@ export default function Header() {
                 <li>
                   <div className="user-menu">
                     <Link href="/profile" className="user-badge" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span className="user-avatar">
+                      <span className="user-avatar" title={user.name}>
                         {user.name.charAt(0).toUpperCase()}
                       </span>
-                      <span className="user-name">{user.name}</span>
                       {user.role === 'admin' && (
-                        <span className="role-tag">Admin</span>
+                        <>
+                          <span className="user-name">{user.name}</span>
+                          <span className="role-tag">Admin</span>
+                        </>
                       )}
                     </Link>
                     <button className="btn btn-ghost btn-sm" onClick={logout}>
