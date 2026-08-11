@@ -70,12 +70,6 @@ export default function Header() {
                       <span className="user-avatar" title={user.name}>
                         {user.name.charAt(0).toUpperCase()}
                       </span>
-                      {user.role === 'admin' && (
-                        <>
-                          <span className="user-name">{user.name}</span>
-                          <span className="role-tag">Admin</span>
-                        </>
-                      )}
                     </button>
                     
                     {dropdownOpen && (
@@ -85,7 +79,9 @@ export default function Header() {
                             {user.name.charAt(0).toUpperCase()}
                           </span>
                           <div className="dropdown-user-info">
-                            <span className="dropdown-username">{user.name}</span>
+                            <span className="dropdown-username">
+                              {user.name} <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85em' }}>- {user.role.toUpperCase()}</span>
+                            </span>
                             <span className="dropdown-email">{user.email}</span>
                           </div>
                         </div>
