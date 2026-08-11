@@ -86,16 +86,16 @@ export default function Header() {
                         <div className="dropdown-divider"></div>
                         <Link href="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
                           <svg className="dropdown-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                          Profile
+                          <span>Profile</span>
                         </Link>
                         <Link href="/test-history" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
                           <svg className="dropdown-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                          Test History
+                          <span>Test History</span>
                         </Link>
                         <div className="dropdown-divider"></div>
                         <button className="dropdown-item logout-btn" onClick={() => { setDropdownOpen(false); logout(); }}>
                           <svg className="dropdown-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                          Logout
+                          <span>Logout</span>
                         </button>
                       </div>
                     )}
@@ -223,56 +223,63 @@ export default function Header() {
           to { opacity: 1; transform: translateY(0); }
         }
 
-        .dropdown-item {
+        .dropdown-item,
+        .dropdown-item:link,
+        .dropdown-item:visited {
           display: flex;
           align-items: center;
           gap: 0.85rem;
-          padding: 0.7rem 1.25rem;
-          font-size: 1.02rem;
+          padding: 0.65rem 1.25rem;
+          font-size: 0.98rem;
           font-weight: 500;
-          color: #e5e7eb;
-          text-decoration: none;
+          color: #e5e7eb !important;
+          text-decoration: none !important;
           background: transparent;
           border: none;
           text-align: left;
           cursor: pointer;
           font-family: inherit;
           transition: background 0.2s ease, color 0.2s ease;
+          width: 100%;
         }
 
         .dropdown-icon {
-          color: #9ca3af;
+          color: #9898a8 !important;
           flex-shrink: 0;
           transition: color 0.2s ease;
         }
 
-        .dropdown-item:hover {
-          background: rgba(255, 255, 255, 0.06);
-          color: #fff;
+        .dropdown-item:hover,
+        .dropdown-item:hover:visited {
+          background: rgba(255, 255, 255, 0.08) !important;
+          color: #ffffff !important;
         }
         
         .dropdown-item:hover .dropdown-icon {
-          color: #fff;
+          color: #ffffff !important;
         }
         
         .dropdown-divider {
           height: 1px;
           background: var(--border-medium);
-          margin: 0.3rem 0;
+          margin: 0.35rem 0;
         }
         
-        .logout-btn {
-          color: #f87171;
+        .logout-btn,
+        .logout-btn:link,
+        .logout-btn:visited {
+          color: #f87171 !important;
         }
         .logout-btn .dropdown-icon {
-          color: #f87171;
+          color: #f87171 !important;
         }
-        .logout-btn:hover {
-          background: rgba(248, 113, 113, 0.1);
-          color: #fca5a5;
+        .logout-btn:hover,
+        .logout-btn:hover:visited {
+          background: rgba(239, 68, 68, 0.15) !important;
+          color: #fca5a5 !important;
         }
         .logout-btn:hover .dropdown-icon {
-          color: #fca5a5;
+          color: #fca5a5 !important;
         }
 
         .user-name {
