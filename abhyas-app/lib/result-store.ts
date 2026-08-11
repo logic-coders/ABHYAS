@@ -10,9 +10,13 @@ export interface TestResultSummary {
   seriesTitle: string;
   subject: Subject;
   score: number;
+  correct: number;
+  incorrect: number;
+  unanswered: number;
   totalQuestions: number;
   percentage: number;
   date: string; // ISO string
+  breakdown?: import('./types').ResultItem[];
 }
 
 /**

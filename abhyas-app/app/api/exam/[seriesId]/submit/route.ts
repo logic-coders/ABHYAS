@@ -155,9 +155,13 @@ export async function POST(
         seriesTitle: series.title,
         subject: series.subject,
         score: correct,
+        correct,
+        incorrect,
+        unanswered,
         totalQuestions,
         percentage,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        breakdown,
       });
     }
 
