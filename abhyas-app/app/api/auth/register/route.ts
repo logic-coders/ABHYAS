@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { addUser } from '@/lib/user-store';
-import { createToken, setAuthCookie, toSafeUser } from '@/lib/auth';
+import { createToken, setAuthCookie, toSafeUser, ADMIN_EMAILS } from '@/lib/auth';
 import { hashPassword } from '@/lib/password';
 import { User } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -48,21 +48,33 @@ export async function POST(request: Request) {
 
     // Hash password and create user
     const passwordHash = await hashPassword(password);
+    const normalizedEmail = email.toLowerCase().trim();
+    const isAdminEmail = ADMIN_EMAILS.includes(normalizedEmail);
 
     const user: User = {
       id: uuidv4(),
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       passwordHash,
-      role: 'user', // Always 'user' — admins are seeded via CLI
-      accountStatus: 'PENDING',
+      role: isAdminEmail ? 'admin' : 'user',
+      accountStatus: isAdminEmail ? 'APPROVED' : 'PENDING',
       createdAt: new Date().toISOString(),
     };
 
     await addUser(user);
 
-    // No auto-login since account is PENDING
     const safeUser = toSafeUser(user);
+
+    // If admin email, auto-login immediately
+    if (isAdminEmail) {
+      const token = await createToken(safeUser);
+      const response = NextResponse.json(
+        { message: 'Registration successful. Admin account active.', user: safeUser },
+        { status: 201 }
+      );
+      setAuthCookie(response, token);
+      return response;
+    }
 
     return NextResponse.json(
       { message: 'Registration successful. Account pending admin approval.', user: safeUser },

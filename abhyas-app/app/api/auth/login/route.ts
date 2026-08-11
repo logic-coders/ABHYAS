@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getUserByEmail } from '@/lib/user-store';
-import { createToken, setAuthCookie, toSafeUser } from '@/lib/auth';
+import { getUserByEmail, updateUserStatus } from '@/lib/user-store';
+import { createToken, setAuthCookie, toSafeUser, ADMIN_EMAILS } from '@/lib/auth';
 import { verifyPassword } from '@/lib/password';
 
 /**
@@ -38,8 +38,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check account status
-    const status = user.accountStatus || 'PENDING';
+    // Admin emails are automatically APPROVED and assigned admin role
+    const isAdminEmail = ADMIN_EMAILS.includes(user.email.toLowerCase().trim());
+    if (isAdminEmail && user.accountStatus !== 'APPROVED') {
+      await updateUserStatus(user.id, 'APPROVED');
+      user.accountStatus = 'APPROVED';
+      user.role = 'admin';
+    }
+
+    // Check account status for normal users
+    const status = isAdminEmail ? 'APPROVED' : (user.accountStatus || 'PENDING');
     if (status === 'PENDING') {
       return NextResponse.json(
         { error: 'Your account is pending admin approval' },

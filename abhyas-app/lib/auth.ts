@@ -79,13 +79,15 @@ export async function getCurrentUser(request: NextRequest): Promise<SafeUser | n
  * Strip sensitive fields from a User to produce a SafeUser.
  */
 export function toSafeUser(user: User): SafeUser {
-  const role = ADMIN_EMAILS.includes(user.email.toLowerCase()) ? 'admin' : 'user';
+  const isAdminEmail = ADMIN_EMAILS.includes(user.email.toLowerCase().trim());
+  const role = isAdminEmail ? 'admin' : (user.role || 'user');
+  const accountStatus = isAdminEmail ? 'APPROVED' : (user.accountStatus || 'PENDING');
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     role,
-    accountStatus: user.accountStatus || 'PENDING',
+    accountStatus,
   };
 }
 
