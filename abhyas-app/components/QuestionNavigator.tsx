@@ -238,47 +238,50 @@ export default function QuestionNavigator({
         }
 
         .nav-current {
-          background: rgba(139, 92, 246, 0.15);
-          color: var(--accent-light);
-          border-color: var(--accent);
-          box-shadow: 0 0 0 3px var(--accent-glow);
+          background: rgba(99, 102, 241, 0.25);
+          color: #a5b4fc;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
         }
 
         .nav-answered {
-          background: rgba(34, 197, 94, 0.15);
-          color: var(--color-correct);
-          border-color: rgba(34, 197, 94, 0.4);
+          background: rgba(34, 197, 94, 0.25) !important;
+          color: #4ade80 !important;
+          border-color: #22c55e !important;
+          font-weight: 800;
         }
 
         .nav-marked {
-          background: rgba(168, 85, 247, 0.15);
-          color: #a855f7;
-          border-color: rgba(168, 85, 247, 0.4);
+          background: rgba(168, 85, 247, 0.25) !important;
+          color: #c084fc !important;
+          border-color: #a855f7 !important;
+          font-weight: 800;
         }
 
         .nav-answered-marked {
-          background: rgba(168, 85, 247, 0.15);
-          color: #a855f7;
-          border-color: rgba(168, 85, 247, 0.4);
+          background: rgba(168, 85, 247, 0.25) !important;
+          color: #c084fc !important;
+          border-color: #a855f7 !important;
           position: relative;
         }
 
         .nav-answered-marked::after {
           content: '';
           position: absolute;
-          bottom: -2px;
-          right: -2px;
+          bottom: 0px;
+          right: 0px;
           width: 10px;
           height: 10px;
           border-radius: 50%;
-          background: var(--color-correct);
+          background: #22c55e;
           border: 2px solid var(--bg-card);
         }
 
         .nav-unanswered {
-          background: rgba(239, 68, 68, 0.12);
-          color: var(--color-incorrect);
-          border-color: rgba(239, 68, 68, 0.35);
+          background: rgba(239, 68, 68, 0.22) !important;
+          color: #f87171 !important;
+          border-color: #ef4444 !important;
+          font-weight: 800;
         }
 
         /* ── Mobile FAB ── */

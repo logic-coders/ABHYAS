@@ -41,7 +41,7 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
               <span className="status-icon">
                 {item.isCorrect ? '✅' : wasUnanswered ? '⬜' : '❌'}
               </span>
-              <span className="q-label">Q{item.questionNumber}</span>
+              <span className="q-label">Q{idx + 1}</span>
               <span className="q-text-preview">
                 {item.questionText.length > 80
                   ? item.questionText.substring(0, 80) + '…'

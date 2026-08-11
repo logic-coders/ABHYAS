@@ -15,10 +15,12 @@ export default function QuestionView({
   selectedOption,
   onSelect,
 }: QuestionViewProps) {
-  // Extract option letter from option text (e.g., "A. Paris" → "A")
-  const getOptionLetter = (optionText: string): string => {
+  // Extract option letter from option text or index (e.g., "A. Paris" → "A")
+  const getOptionLetter = (optionText: string, index: number): string => {
     const match = optionText.match(/^[(\s]*([A-Ja-j])[).:\s]/);
-    return match ? match[1].toUpperCase() : optionText.charAt(0).toUpperCase();
+    if (match) return match[1].toUpperCase();
+    const fallbackLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    return fallbackLetters[index] || String.fromCharCode(65 + index);
   };
 
   return (
@@ -32,7 +34,7 @@ export default function QuestionView({
       {/* Options */}
       <div className="options-grid">
         {question.options.map((option, idx) => {
-          const letter = getOptionLetter(option);
+          const letter = getOptionLetter(option, idx);
           const isSelected = selectedOption === letter;
 
           return (
@@ -43,7 +45,7 @@ export default function QuestionView({
               type="button"
             >
               <span className={`option-letter ${isSelected ? 'letter-selected' : ''}`}>
-                {letter}
+                ({letter})
               </span>
               <span className="option-text">{option.replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '')}</span>
               {isSelected && <span className="check-icon">✓</span>}

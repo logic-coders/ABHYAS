@@ -48,9 +48,7 @@ Admin creates a **Test Series** by filling in:
 - User's answers during the test are held in memory/session (client-side state) only for the duration of the attempt.
 - Scoring is computed on the fly at submission time by re-parsing the answer portion of the same PDF range and comparing it to the user's session answers.
 
----
-
-## Phase II — Authentication & Role-Based Access
+## Phase II
 
 ### 5. Login / Register
 - Users can **Register** and **Login** to access the platform.
@@ -60,27 +58,120 @@ Admin creates a **Test Series** by filling in:
 - Role is assigned at registration/account creation (e.g., admin accounts created manually/seeded, rather than self-registered, to keep admin access limited to 1–2 people).
 
 ### 6. Role-Based Dashboard
-- After login, the user is redirected to a **dashboard** based on their role:
+- After login, the user is redirected to a dashboard based on their role:
   - **Admin Dashboard** — access to the Admin Page (upload PDFs, create test series, manage subjects/question ranges).
   - **User Dashboard** — access to the Landing Page (browse test series), take exams, and view their own past results.
 - Access control ensures normal users cannot reach admin-only actions (e.g., PDF upload, test series creation), and vice versa keeps the experience role-appropriate.
 
-## Phase III — User Profiles & Security
+## Phase III
 
-### 7. Profile Dashboard
-- Users have a Profile Dashboard where they can view their test history (past attempts and scores).
+### 7. Profile Page
+- Clicking on the **profile picture** (available once logged in) opens the user's profile.
+- Profile displays:
+  - Basic details filled during registration (name, email, etc.)
+  - History of tests taken by the user (test series attempted, scores)
 
-### 8. Admin Whitelist
-- Ensure only specific, whitelisted emails or designated accounts can register as Admin or access Admin functionality.
+### 8. Admin Access Control (Email-Based)
+- Admin access is granted based on a **whitelisted email**, rather than a manually assigned role flag:
+  - `chandansingh15102000@gmail.com`
+- On login/registration, if the logged-in user's email matches an entry in the admin whitelist, they are routed to the **Admin Dashboard** (Admin Page access); all other users get the standard **User Dashboard**.
+- Additional admin emails can be added to this whitelist later if a second admin is needed (per the "1–2 admins" rule from Phase II).
 
-## Phase IV — Core Exam Flow Improvements
+### 9. UI Cleanup — Remove Rocket Emoji
+- Remove the 🚀 (rocket) emoji wherever it currently appears across all pages/components.
 
-### 11. PDF Answer Mapping
-- Fix/improve how answers are mapped from the original PDF numbers to the test logic, ensuring correct answer lookup.
+### 10. Random Test Generation
+- Admin can upload **multiple PDFs** (one, two, three, or more) for a single subject over time — building up a larger question pool for that subject.
+- A **"Generate Test"** action on the Admin Page creates a test series by:
+  - Randomly selecting **80 questions** from the full pool of questions available for that subject (across all uploaded PDFs for that subject).
+  - Ensuring the **same set of 80 questions is not repeated** on subsequent "Generate Test" actions for that subject (i.e., avoids generating an identical test twice in a row / repeatedly).
+- The generated test (80 randomly selected questions) becomes a new Test Series, visible on the Landing Page like other test series.
 
-### 13. Manual Submit & Result View
-- Users can manually submit the test.
-- Post-submission, a result page shows the final score and a breakdown of correct/incorrect answers.
+## Phase IV
+
+### 11. Language Selection (English / Hindi)
+- On opening a test (from its PDF-based test series), the user is prompted to choose a language: **English** or **Hindi**.
+- If the user selects **English**, questions are populated/rendered in English.
+- If the user selects **Hindi**, questions are populated/rendered in Hindi.
+- The selected language applies consistently across all questions for that test attempt.
+
+### 12. Question Navigator Panel
+- While taking the test, a **question number panel** is shown on the right side of the Exam Page (similar to real exam interfaces), listing all question numbers for the test.
+- Clicking any question number in the panel takes the user **directly to that specific question**, instead of only moving sequentially via Next/Previous.
+- Each question number's color reflects its status:
+  - **Green** — question has been answered (an option was selected) before moving to the next question.
+  - **Red** — question was left unanswered (no option selected) when the user moved to the next question.
+- This gives the user a clear, clickable overview of attempted vs. skipped questions at any point during the test.
+
+### 13. Last Question — Submit Flow
+- On the **last question** of the test, the usual "Next" button is replaced with two options:
+  1. **Previous** — as usual, to go back and review/change earlier answers.
+  2. **Submit** — to end and submit the test.
+- Clicking **Submit** opens a **popup/modal** showing the test result (score, correct/incorrect breakdown).
+- Closing the popup takes the user back into the app, and their **score is updated on their Profile Dashboard**.
+
+## Bug Fixes / Corrections (Phase IV)
+
+### Fix 1 — Language Selection UI
+- Change the language selection screen heading to **"Choose Test Mode"** (instead of current wording).
+- Options remain: English, Hindi
+- **Remove the flag icons** currently shown next to English/Hindi — display as plain text options only, no country flags.
+
+### Fix 2 — Incorrect Option Extraction from PDF
+- **Bug:** Currently the PDF parser is hardcoded/limited to extracting only **5 options per question**, but the source PDFs contain a **variable number of options per question** — some questions have more than 5 (seen up to 10 options in testing).
+- **Expected behavior:** The parser must **dynamically extract however many options exist for each individual question**.
+
+### Fix 3 — Question Navigator Panel (Right Side)
+- **Change UI:** Question numbers in the right-side navigator panel should be displayed as **circular buttons**.
+- **Bug:** The green/red color-coding described in Phase IV, Item 12 is **not currently working**.
+- **Expected behavior:** When Next is clicked with an answer selected, the circle turns **green**. When Next is clicked without an answer selected, the circle turns **red**.
+
+### Fix 4 — Hindi Question Text Extraction (Encoding Issue)
+- **Bug:** When Hindi is selected as the test mode, question text shows **garbled/hash-like characters** due to a text encoding issue.
+- **Expected behavior:** Hindi questions must be extracted and rendered as clean, readable Devanagari text on the frontend — matching exactly what appears in the source PDF. This likely requires a better PDF extraction library that handles embedded fonts.
+
+### Fix 5 — Question Navigator: Circle Shape + Color Update (Clarified)
+- **Shape:** Each question number must be a **round/circular button**.
+- **Color behavior:** Color update applies to the **question just answered**, not the question being navigated to.
+
+### Fix 6 — Option Labeling is Inconsistent
+- **Bug:** Option labels are inconsistent and incorrect.
+- **Expected behavior:** Option labels must be extracted **exactly as they appear in the PDF** — `(A)` through `(E)`.
+
+### Fix 7 — Multiple Options Getting Selected (Should Be Single-Select)
+- **Bug:** Clicking on **one option** is incorrectly selecting **2–3 options simultaneously**.
+- **Expected behavior:** Each question must behave as a **single-select (radio button)** input.
+
+### Fix 8 — Navigator Circle Size
+- The right-side navigator's question-number buttons should be **circular (round) and larger in size**.
+
+### Fix 9 — Navigator Colors Not Applying At All (Including "Marked" State)
+- **Bug:** All question-number buttons in the navigator remain a single default color.
+- **Expected behavior:** The navigator must show three distinct visual states: **Green** (answered), **Red** (skipped), and **Purple** (marked). Add a "Mark for Review" button if it doesn't exist.
+
+### Fix 10 — PDF Extraction Accuracy (English & Hindi) Must Be 100% Exact
+- **Bug:** Current question/option extraction does not reliably match the source PDF content.
+- **Expected behavior:** Extraction accuracy must be 100%.
+
+### Fix 11 — Hindi Answer Fetching Incorrect
+- **Bug:** The correct answer being fetched/used for scoring on Hindi questions is not accurate.
+- **Expected behavior:** Answers must be fetched strictly from the exact corresponding question number in the source PDF.
+
+### Fix 12 — Lock Test in Fullscreen, No Back Navigation
+- **Bug:** Users can use back navigation mid-test.
+- **Expected behavior:** Force fullscreen mode and block back navigation during the test.
+
+### Fix 13 — Timer Needs to Be More Prominent
+- **Bug:** Timer is not visually prominent enough.
+- **Expected behavior:** Redesign timer with bold, larger text, distinct background color, fixed position.
+
+### Fix 14 — Remove Language Flags from Exam Page
+- **Bug:** English/Hindi language indicators are shown with country flag icons.
+- **Expected behavior:** Remove flag icons.
+
+### Fix 15 — Result Page Question Numbering Must Also Start from 1
+- **Bug:** Result Page shows original PDF question numbers.
+- **Expected behavior:** Result Page must display questions numbered sequentially starting from 1.
 
 ## Phase V
 
@@ -113,10 +204,7 @@ Admin creates a **Test Series** by filling in:
 - This detailed view matches the same post-submission result page shown right after submitting a test — showing the full question-by-question breakdown of correct vs. incorrect answers, not just the summary score.
 
 ## Tech Stack
-_(To be filled in — e.g., Frontend framework, Backend, Database, Hosting)_
+Next.js, React, CSS Modules
 
 ## Getting Started
-_(To be filled in — installation steps, environment variables, run commands)_
-
-## Folder Structure
-_(To be filled in once project scaffolding is set up)_
+`npm run dev`

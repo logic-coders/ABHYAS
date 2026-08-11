@@ -66,10 +66,11 @@ export default function ExamTimer({ seriesId, onTimeUp }: ExamTimerProps) {
     ].join(':');
   };
 
+  const isCritical = timeLeft < 2 * 60 * 1000; // Less than 2 minutes
   const isWarning = timeLeft < 5 * 60 * 1000; // Less than 5 minutes
 
   return (
-    <div className={`exam-timer ${isWarning ? 'timer-warning' : ''}`}>
+    <div className={`exam-timer ${isCritical ? 'timer-critical' : isWarning ? 'timer-warning' : ''}`}>
       <span className="timer-icon">⏱️</span>
       <span className="timer-text">{formatTime(timeLeft)}</span>
       
@@ -77,28 +78,38 @@ export default function ExamTimer({ seriesId, onTimeUp }: ExamTimerProps) {
         .exam-timer {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 1rem;
-          background: var(--bg-glass-strong);
-          border: 1px solid var(--border-subtle);
-          border-radius: var(--radius-full);
+          gap: 0.6rem;
+          padding: 0.6rem 1.2rem;
+          background: #1e1b4b;
+          border: 2px solid #6366f1;
+          border-radius: var(--radius-md);
           font-variant-numeric: tabular-nums;
-          font-weight: 700;
-          color: var(--text-primary);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          font-weight: 800;
+          font-size: 1.15rem;
+          color: #ffffff;
+          box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+          letter-spacing: 0.05em;
         }
 
         .timer-warning {
-          background: rgba(239, 68, 68, 0.15);
-          border-color: rgba(239, 68, 68, 0.4);
-          color: var(--color-incorrect);
-          animation: pulse 2s infinite;
+          background: #7c2d12;
+          border-color: #f97316;
+          color: #ffedd5;
+          box-shadow: 0 4px 14px rgba(249, 115, 22, 0.4);
+        }
+
+        .timer-critical {
+          background: #7f1d1d;
+          border-color: #ef4444;
+          color: #fee2e2;
+          box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5);
+          animation: pulse 1.5s infinite;
         }
 
         @keyframes pulse {
-          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-          70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+          50% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
       `}</style>
     </div>

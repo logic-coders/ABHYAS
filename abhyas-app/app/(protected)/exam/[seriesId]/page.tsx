@@ -168,6 +168,42 @@ export default function ExamPage() {
     }
   }, [examResult, handleSubmit]);
 
+  // Fullscreen lock & back navigation prevention mid-test
+  useEffect(() => {
+    if (!hasAcceptedDisclaimer || examResult) return;
+
+    // 1. Prevent back navigation
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+      alert('Back navigation is disabled during the exam. Please complete and submit your exam using the Submit button.');
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    // 2. Warn on tab close / reload
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Your exam is in progress. Leaving this page will auto-submit your test.';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasAcceptedDisclaimer, examResult]);
+
+  const handleAcceptDisclaimer = () => {
+    setHasAcceptedDisclaimer(true);
+    // Request fullscreen on accepting disclaimer
+    if (typeof document !== 'undefined' && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {
+        // Fullscreen block ignored by browser permissions if any
+      });
+    }
+  };
+
   // ── Language Selection ──
   if (!language) {
     return <LanguageSelector onSelect={(lang) => setLanguage(lang)} />;
@@ -208,7 +244,7 @@ export default function ExamPage() {
   if (!hasAcceptedDisclaimer) {
     return (
       <DisclaimerModal
-        onAccept={() => setHasAcceptedDisclaimer(true)}
+        onAccept={handleAcceptDisclaimer}
         onCancel={() => router.push('/')}
       />
     );
@@ -225,14 +261,11 @@ export default function ExamPage() {
           <div className="exam-main">
             {/* Exam Header */}
             <div className="exam-header">
-              <button className="btn btn-ghost" onClick={() => router.push('/')}>
-                ← Back
-              </button>
               <div className="exam-title-area">
                 <h1 className="exam-title">{examData.seriesTitle}</h1>
                 <span className="badge">{examData.subject}</span>
                 <span className="lang-badge">
-                  {language === 'en' ? '🇬🇧 EN' : '🇮🇳 हि'}
+                  {language === 'en' ? 'English' : 'Hindi'}
                 </span>
               </div>
               <div style={{ marginLeft: 'auto' }}>
