@@ -36,8 +36,8 @@ export default function PublicLandingPage() {
                   <span className="pass-badge">VIP ACCESS</span>
                 </div>
                 <div className="pass-body">
-                  <p className="pass-title">Your Next Challenge Awaits, {user.name}</p>
-                  <p className="pass-subtitle">Ready to prove your skills?</p>
+                  <p className="pass-title" style={{ fontSize: '1.5rem', marginBottom: '0.75rem' }}>Welcome back, {user.name} 👋</p>
+                  <p className="pass-subtitle" style={{ fontStyle: 'italic', marginBottom: '1.5rem', lineHeight: '1.5' }}>"Success is the sum of small efforts, repeated day in and day out."</p>
                   <Link href="/tests" className="btn btn-primary btn-lg pass-btn">
                     <span>Enter Exam Arena</span>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>

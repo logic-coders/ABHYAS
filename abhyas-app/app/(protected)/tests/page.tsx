@@ -40,17 +40,6 @@ export default function LandingPage() {
     <div className="container">
       {/* Dashboard Header */}
       <section className="dashboard-header" style={{ marginTop: '3rem', marginBottom: '2rem', textAlign: 'center' }}>
-        {user && (
-          <p style={{
-            fontSize: '0.95rem',
-            color: 'var(--accent-light)',
-            fontWeight: 600,
-            marginBottom: '0.5rem',
-            animation: 'fadeInUp 0.4s ease',
-          }}>
-            Welcome back, {user.name}! 👋
-          </p>
-        )}
         <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
           Available Practice Tests
         </h1>
