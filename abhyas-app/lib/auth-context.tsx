@@ -70,7 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: data.error || 'Registration failed' };
       }
 
-      setUser(data.user);
+      if (data.user?.role === 'admin') {
+        setUser(data.user);
+      }
       return { success: true };
     } catch {
       return { success: false, error: 'Network error' };

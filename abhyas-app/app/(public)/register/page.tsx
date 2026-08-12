@@ -39,7 +39,7 @@ export default function RegisterPage() {
     if (result.success) {
       setShowSuccess(true);
       setTimeout(() => {
-        router.push('/');
+        router.push('/login');
         router.refresh();
       }, 2000);
     } else {
