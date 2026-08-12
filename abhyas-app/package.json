@@ -15,6 +15,7 @@
     "bcryptjs": "^3.0.3",
     "jose": "^5.10.0",
     "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.9.2",
     "next": "^14.2.35",
     "npm-hindi-converter": "^0.1.2",
     "pdf-parse": "^1.1.1",

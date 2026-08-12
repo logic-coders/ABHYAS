@@ -1,117 +1,107 @@
-import { User, UserRole } from './types';
-import { uploadJSON, downloadJSON } from './s3';
-
-const USERS_KEY = 'abhyas/users.json';
+import { User as UserType } from './types';
+import connectToDatabase from './mongoose';
+import { User } from './models/User';
 
 const MAX_USERS = 10;
 const MAX_ADMINS = 2;
 
-/**
- * Retrieve all users from S3.
- */
-export async function getAllUsers(): Promise<User[]> {
-  try {
-    const data = await downloadJSON<User[]>(USERS_KEY);
-    return data ?? [];
-  } catch (error) {
-    console.warn('Could not load users from S3:', (error as Error).message);
-    return [];
-  }
+// Helper to convert Mongoose document to plain object
+function toPlainUser(doc: any): UserType {
+  return {
+    id: doc.id,
+    name: doc.name,
+    email: doc.email,
+    password: doc.password,
+    role: doc.role,
+    accountStatus: doc.accountStatus,
+    createdAt: doc.createdAt,
+    resetOtp: doc.resetOtp,
+    resetOtpExpiry: doc.resetOtpExpiry,
+  };
 }
 
-/**
- * Find a user by email (case-insensitive).
- */
-export async function getUserByEmail(email: string): Promise<User | null> {
-  const all = await getAllUsers();
-  return all.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
+export async function getAllUsers(): Promise<UserType[]> {
+  await connectToDatabase();
+  const users = await User.find({}).lean();
+  return users.map(toPlainUser);
 }
 
-/**
- * Find a user by ID.
- */
-export async function getUserById(id: string): Promise<User | null> {
-  const all = await getAllUsers();
-  return all.find((u) => u.id === id) ?? null;
+export async function getUserByEmail(email: string): Promise<UserType | null> {
+  await connectToDatabase();
+  // Using case-insensitive regex search for email
+  const user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } }).lean();
+  return user ? toPlainUser(user) : null;
 }
 
-/**
- * Add a new user. Enforces role-based caps.
- * Throws if the cap is reached or email already exists.
- */
-export async function addUser(user: User): Promise<void> {
-  const all = await getAllUsers();
+export async function getUserById(id: string): Promise<UserType | null> {
+  await connectToDatabase();
+  const user = await User.findOne({ id }).lean();
+  return user ? toPlainUser(user) : null;
+}
 
-  // Check duplicate email
-  if (all.some((u) => u.email.toLowerCase() === user.email.toLowerCase())) {
+export async function addUser(user: UserType): Promise<void> {
+  await connectToDatabase();
+
+  const existingUser = await User.findOne({ email: { $regex: new RegExp(`^${user.email}$`, 'i') } });
+  if (existingUser) {
     throw new Error('An account with this email already exists');
   }
 
   // Check caps
   if (user.role === 'admin') {
-    const adminCount = all.filter((u) => u.role === 'admin').length;
+    const adminCount = await User.countDocuments({ role: 'admin' });
     if (adminCount >= MAX_ADMINS) {
       throw new Error(`Admin cap reached (max ${MAX_ADMINS})`);
     }
   } else {
-    const userCount = all.filter((u) => u.role === 'user').length;
+    const userCount = await User.countDocuments({ role: 'user' });
     if (userCount >= MAX_USERS) {
       throw new Error(`User registration cap reached (max ${MAX_USERS})`);
     }
   }
 
-  all.push(user);
-  await uploadJSON(USERS_KEY, all);
+  await User.create(user);
 }
 
-/**
- * Get current counts for roles.
- */
 export async function getUserCounts(): Promise<{ admins: number; users: number; total: number }> {
-  const all = await getAllUsers();
-  const admins = all.filter((u) => u.role === 'admin').length;
-  const users = all.filter((u) => u.role === 'user').length;
-  return { admins, users, total: all.length };
+  await connectToDatabase();
+  const admins = await User.countDocuments({ role: 'admin' });
+  const users = await User.countDocuments({ role: 'user' });
+  return { admins, users, total: admins + users };
 }
 
-export async function updateUserStatus(userId: string, status: User['accountStatus']): Promise<void> {
-  const all = await getAllUsers();
-  const index = all.findIndex(u => u.id === userId);
-  if (index === -1) {
+export async function updateUserStatus(userId: string, status: UserType['accountStatus']): Promise<void> {
+  await connectToDatabase();
+  const result = await User.findOneAndUpdate({ id: userId }, { accountStatus: status });
+  if (!result) {
     throw new Error('User not found');
   }
-  all[index].accountStatus = status;
-  await uploadJSON(USERS_KEY, all);
 }
 
 export async function deleteUser(userId: string): Promise<void> {
-  const all = await getAllUsers();
-  const index = all.findIndex(u => u.id === userId);
-  if (index === -1) {
+  await connectToDatabase();
+  
+  const userToDelete = await User.findOne({ id: userId });
+  if (!userToDelete) {
     throw new Error('User not found');
   }
-  
-  // Prevent deleting the last admin
-  if (all[index].role === 'admin') {
-    const adminCount = all.filter((u) => u.role === 'admin').length;
+
+  if (userToDelete.role === 'admin') {
+    const adminCount = await User.countDocuments({ role: 'admin' });
     if (adminCount <= 1) {
       throw new Error('Cannot delete the last admin account');
     }
   }
 
-  all.splice(index, 1);
-  await uploadJSON(USERS_KEY, all);
+  await User.deleteOne({ id: userId });
 }
 
-export async function updateUser(userId: string, updates: Partial<User>): Promise<void> {
-  const all = await getAllUsers();
-  const index = all.findIndex(u => u.id === userId);
-  if (index === -1) {
+export async function updateUser(userId: string, updates: Partial<UserType>): Promise<void> {
+  await connectToDatabase();
+  const result = await User.findOneAndUpdate({ id: userId }, updates);
+  if (!result) {
     throw new Error('User not found');
   }
-  
-  all[index] = { ...all[index], ...updates };
-  await uploadJSON(USERS_KEY, all);
 }
 
 export { MAX_USERS, MAX_ADMINS };

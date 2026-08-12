@@ -1,7 +1,6 @@
-import { uploadJSON, downloadJSON } from './s3';
 import { Subject } from './types';
-
-const RESULTS_KEY = 'abhyas/results.json';
+import connectToDatabase from './mongoose';
+import { Result } from './models/Result';
 
 export interface TestResultSummary {
   id: string;
@@ -19,32 +18,38 @@ export interface TestResultSummary {
   breakdown?: import('./types').ResultItem[];
 }
 
-/**
- * Retrieve all results from S3.
- */
+// Helper to convert Mongoose document to plain object
+function toPlainResult(doc: any): TestResultSummary {
+  return {
+    id: doc.id,
+    userId: doc.userId,
+    seriesId: doc.seriesId,
+    seriesTitle: doc.seriesTitle,
+    subject: doc.subject as Subject,
+    score: doc.score,
+    correct: doc.correct,
+    incorrect: doc.incorrect,
+    unanswered: doc.unanswered,
+    totalQuestions: doc.totalQuestions,
+    percentage: doc.percentage,
+    date: doc.date,
+    breakdown: doc.breakdown,
+  };
+}
+
 export async function getAllResults(): Promise<TestResultSummary[]> {
-  try {
-    const data = await downloadJSON<TestResultSummary[]>(RESULTS_KEY);
-    return data ?? [];
-  } catch (error) {
-    console.warn('Could not load results from S3:', (error as Error).message);
-    return [];
-  }
+  await connectToDatabase();
+  const results = await Result.find({}).lean();
+  return results.map(toPlainResult);
 }
 
-/**
- * Get results for a specific user.
- */
 export async function getResultsByUser(userId: string): Promise<TestResultSummary[]> {
-  const all = await getAllResults();
-  return all.filter((r) => r.userId === userId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  await connectToDatabase();
+  const results = await Result.find({ userId }).sort({ date: -1 }).lean();
+  return results.map(toPlainResult);
 }
 
-/**
- * Add a new result to the store.
- */
 export async function addResult(result: TestResultSummary): Promise<void> {
-  const all = await getAllResults();
-  all.push(result);
-  await uploadJSON(RESULTS_KEY, all);
+  await connectToDatabase();
+  await Result.create(result);
 }
