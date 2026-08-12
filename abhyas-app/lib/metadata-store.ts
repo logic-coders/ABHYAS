@@ -8,11 +8,12 @@ function toPlainTestSeries(doc: any): TestSeriesType {
     id: doc.id,
     title: doc.title,
     subject: doc.subject,
+    s3Key: doc.s3Key,
+    startQuestion: doc.startQuestion,
+    endQuestion: doc.endQuestion,
     createdAt: doc.createdAt,
-    pdfS3Key: doc.pdfS3Key,
-    totalQuestions: doc.totalQuestions,
-    durationMinutes: doc.durationMinutes,
-    status: doc.status,
+    isRandom: doc.isRandom,
+    randomQuestions: doc.randomQuestions,
   };
 }
 

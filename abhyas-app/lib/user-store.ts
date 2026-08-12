@@ -11,7 +11,7 @@ function toPlainUser(doc: any): UserType {
     id: doc.id,
     name: doc.name,
     email: doc.email,
-    password: doc.password,
+    passwordHash: doc.passwordHash,
     role: doc.role,
     accountStatus: doc.accountStatus,
     createdAt: doc.createdAt,
