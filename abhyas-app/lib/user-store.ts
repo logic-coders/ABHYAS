@@ -84,4 +84,23 @@ export async function updateUserStatus(userId: string, status: User['accountStat
   await uploadJSON(USERS_KEY, all);
 }
 
+export async function deleteUser(userId: string): Promise<void> {
+  const all = await getAllUsers();
+  const index = all.findIndex(u => u.id === userId);
+  if (index === -1) {
+    throw new Error('User not found');
+  }
+  
+  // Prevent deleting the last admin
+  if (all[index].role === 'admin') {
+    const adminCount = all.filter((u) => u.role === 'admin').length;
+    if (adminCount <= 1) {
+      throw new Error('Cannot delete the last admin account');
+    }
+  }
+
+  all.splice(index, 1);
+  await uploadJSON(USERS_KEY, all);
+}
+
 export { MAX_USERS, MAX_ADMINS };

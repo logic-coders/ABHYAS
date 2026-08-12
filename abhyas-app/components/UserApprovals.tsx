@@ -42,6 +42,27 @@ export default function UserApprovals() {
     }
   };
 
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!window.confirm(`Are you sure you want to completely delete the user ${userName}? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/admin/users?userId=${userId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete user');
+      }
+      
+      // Update local state
+      setUsers(users.filter(u => u.id !== userId));
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   const pendingUsers = users.filter(u => u.accountStatus === 'PENDING' && u.role !== 'admin');
   const otherUsers = users.filter(u => u.accountStatus !== 'PENDING' && u.role !== 'admin');
 
@@ -74,6 +95,13 @@ export default function UserApprovals() {
                   style={{ color: 'var(--color-incorrect)' }}
                 >
                   Reject
+                </button>
+                <button 
+                  className="btn btn-ghost"
+                  onClick={() => handleDeleteUser(user.id, user.name)}
+                  style={{ color: 'var(--color-incorrect)', background: 'rgba(239,68,68,0.1)' }}
+                >
+                  Delete
                 </button>
               </div>
             </div>
@@ -110,6 +138,30 @@ export default function UserApprovals() {
                   style={{ color: 'var(--color-incorrect)' }}
                 >
                   Revoke
+                </button>
+                <button 
+                  className="btn btn-ghost"
+                  onClick={() => handleDeleteUser(user.id, user.name)}
+                  style={{ color: 'var(--color-incorrect)', background: 'rgba(239,68,68,0.1)' }}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+            {user.accountStatus === 'REJECTED' && (
+              <div className="user-actions">
+                <button 
+                  className="btn btn-ghost"
+                  onClick={() => handleUpdateStatus(user.id, 'APPROVED')}
+                >
+                  Approve
+                </button>
+                <button 
+                  className="btn btn-ghost"
+                  onClick={() => handleDeleteUser(user.id, user.name)}
+                  style={{ color: 'var(--color-incorrect)', background: 'rgba(239,68,68,0.1)' }}
+                >
+                  Delete
                 </button>
               </div>
             )}

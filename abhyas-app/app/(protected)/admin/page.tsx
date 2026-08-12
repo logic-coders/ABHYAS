@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import AdminForm from '@/components/AdminForm';
 import UserApprovals from '@/components/UserApprovals';
+import UserDatabase from '@/components/admin/UserDatabase';
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'tests' | 'users'>('tests');
+  const [activeTab, setActiveTab] = useState<'tests' | 'users' | 'database'>('tests');
 
   return (
     <div className="container page-wrapper">
@@ -31,9 +32,17 @@ export default function AdminPage() {
         >
           User Approvals
         </button>
+        <button 
+          className={`tab-btn ${activeTab === 'database' ? 'active' : ''}`}
+          onClick={() => setActiveTab('database')}
+        >
+          User Database
+        </button>
       </div>
 
-      {activeTab === 'tests' ? <AdminForm /> : <UserApprovals />}
+      {activeTab === 'tests' && <AdminForm />}
+      {activeTab === 'users' && <UserApprovals />}
+      {activeTab === 'database' && <UserDatabase />}
 
       <style jsx>{`
         .admin-header {
