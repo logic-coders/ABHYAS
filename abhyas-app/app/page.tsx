@@ -19,22 +19,16 @@ export default function PublicLandingPage() {
           Practice with real test papers. Choose a subject, take the exam, and
           get instant results with detailed answer breakdowns.
         </p>
-        <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-          {user ? (
-            <Link href="/tests" className="btn btn-primary btn-lg">
-              Go to Tests
+        {!user && (
+          <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <Link href="/register" className="btn btn-primary btn-lg">
+              Get Started Free
             </Link>
-          ) : (
-            <>
-              <Link href="/register" className="btn btn-primary btn-lg">
-                Get Started Free
-              </Link>
-              <Link href="/login" className="btn btn-secondary btn-lg">
-                Login
-              </Link>
-            </>
-          )}
-        </div>
+            <Link href="/login" className="btn btn-secondary btn-lg">
+              Login
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* About Abhyas Section */}
