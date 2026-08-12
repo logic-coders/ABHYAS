@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +94,17 @@ export default function LoginPage() {
               'Sign In'
             )}
           </button>
+          
+          <div style={{ textAlign: 'center', marginTop: '-0.25rem' }}>
+            <button 
+              type="button" 
+              className="auth-link" 
+              style={{ background: 'none', border: 'none', fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}
+              onClick={() => setShowForgotModal(true)}
+            >
+              Forgot Password?
+            </button>
+          </div>
         </form>
 
         {/* Footer */}
@@ -100,6 +113,10 @@ export default function LoginPage() {
           <Link href="/register" className="auth-link">Create one</Link>
         </p>
       </div>
+
+      {showForgotModal && (
+        <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />
+      )}
 
       <style jsx>{`
         .auth-page {

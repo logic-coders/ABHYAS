@@ -16,7 +16,7 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
     return (
       <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
         <p style={{ color: 'var(--text-secondary)' }}>You haven't taken any tests yet.</p>
-        <a href="/" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
+        <a href="/tests" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
           Browse Tests
         </a>
       </div>

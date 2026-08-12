@@ -81,6 +81,8 @@ export interface User {
   role: UserRole;
   accountStatus: AccountStatus;
   createdAt: string; // ISO date string
+  resetOtp?: string;
+  resetOtpExpiry?: string;
 }
 
 /** Safe user sent to the client (no password hash) */

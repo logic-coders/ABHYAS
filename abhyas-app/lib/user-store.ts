@@ -103,4 +103,15 @@ export async function deleteUser(userId: string): Promise<void> {
   await uploadJSON(USERS_KEY, all);
 }
 
+export async function updateUser(userId: string, updates: Partial<User>): Promise<void> {
+  const all = await getAllUsers();
+  const index = all.findIndex(u => u.id === userId);
+  if (index === -1) {
+    throw new Error('User not found');
+  }
+  
+  all[index] = { ...all[index], ...updates };
+  await uploadJSON(USERS_KEY, all);
+}
+
 export { MAX_USERS, MAX_ADMINS };
