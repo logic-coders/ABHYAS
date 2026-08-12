@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   description:
     'Browse available tests, take exams, and review your results with Abhyas — a modern test exam platform.',
   keywords: ['test', 'exam', 'quiz', 'education', 'practice'],
+  icons: {
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({
