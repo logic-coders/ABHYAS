@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,8 +37,11 @@ export default function RegisterPage() {
     const result = await register(name, email, password);
 
     if (result.success) {
-      router.push('/tests');
-      router.refresh();
+      setShowSuccess(true);
+      setTimeout(() => {
+        router.push('/');
+        router.refresh();
+      }, 2000);
     } else {
       setError(result.error || 'Registration failed');
       setIsLoading(false);
@@ -57,10 +61,27 @@ export default function RegisterPage() {
           <p className="auth-subtitle">Join us and start practicing</p>
         </div>
 
-        {/* Error */}
+        {/* Error / Success Messages */}
         {error && (
           <div className="auth-error">
             ❌ {error}
+          </div>
+        )}
+        
+        {showSuccess && (
+          <div className="auth-success" style={{
+            padding: '1rem',
+            marginBottom: '1.25rem',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            background: 'rgba(34, 197, 94, 0.15)',
+            color: '#4ade80',
+            border: '1px solid rgba(34, 197, 94, 0.4)',
+            borderRadius: 'var(--radius-md)',
+            animation: 'fadeInUp 0.3s ease',
+            textAlign: 'center'
+          }}>
+            ✅ You have successfully registered! Redirecting...
           </div>
         )}
 
