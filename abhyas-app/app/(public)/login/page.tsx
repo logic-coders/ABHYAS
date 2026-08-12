@@ -24,7 +24,7 @@ export default function LoginPage() {
     if (result.success) {
       // Redirect based on role — the middleware will handle it on next navigation,
       // but let's check the user from the auth context
-      router.push('/');
+      router.push('/tests');
       router.refresh();
     } else {
       setError(result.error || 'Login failed');

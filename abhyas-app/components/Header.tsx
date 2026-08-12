@@ -50,7 +50,7 @@ export default function Header() {
             ) : user ? (
               <>
                 <li>
-                  <Link href="/" className="nav-link">
+                  <Link href="/tests" className="nav-link">
                     Tests
                   </Link>
                 </li>
