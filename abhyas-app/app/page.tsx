@@ -19,7 +19,17 @@ export default function PublicLandingPage() {
           Practice with real test papers. Choose a subject, take the exam, and
           get instant results with detailed answer breakdowns.
         </p>
-        {!user && (
+        {user ? (
+          <div style={{ marginTop: '2.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+              Choose your test and start your test now
+            </p>
+            <Link href="/tests" className="btn btn-primary btn-lg" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>Go to Tests</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </Link>
+          </div>
+        ) : (
           <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
             <Link href="/register" className="btn btn-primary btn-lg">
               Get Started Free
