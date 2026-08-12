@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 
 const ResultItemSchema = new mongoose.Schema({
   questionNumber: { type: Number, required: true },
+  questionText: { type: String },
+  options: [{ type: String }],
   userAnswer: { type: String, required: true },
   correctAnswer: { type: String, required: true },
   isCorrect: { type: Boolean, required: true },
