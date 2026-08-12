@@ -50,13 +50,13 @@ export default function Header() {
             ) : user ? (
               <>
                 <li>
-                  <Link href="/tests" className="nav-link">
+                  <Link href="/tests" className={`nav-link ${pathname?.startsWith('/tests') ? 'active' : ''}`}>
                     Tests
                   </Link>
                 </li>
                 {user.role === 'admin' && (
                   <li>
-                    <Link href="/admin" className="nav-link">
+                    <Link href="/admin" className={`nav-link ${pathname?.startsWith('/admin') ? 'active' : ''}`}>
                       Admin
                     </Link>
                   </li>
