@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetch('/api/auth/logout', { method: 'POST' });
     } finally {
       setUser(null);
-      window.location.href = '/login';
+      window.location.href = '/';
     }
   }, []);
 
