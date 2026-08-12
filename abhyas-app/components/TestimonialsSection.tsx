@@ -11,21 +11,21 @@ export interface Testimonial {
 const DEFAULT_TESTIMONIALS: Testimonial[] = [
   {
     id: '1',
-    name: 'Chandan Kumar S.',
+    name: 'Mukesh Kumar',
     role: 'Associate Engineer Candidate',
     quote: 'The timed exam environment on Abhyas prepared me to manage time efficiently under pressure. The detailed score breakdowns made my preparation focused and effective.',
     rating: 5,
   },
   {
     id: '2',
-    name: 'Ananya S.',
+    name: 'Amit Singh',
     role: 'Certification Aspirant',
     quote: 'Being able to practice authentic test papers with instant feedback gave me complete confidence before my actual assessment.',
     rating: 5,
   },
   {
     id: '3',
-    name: 'Rahul M.',
+    name: 'Rahul Mohanti',
     role: 'Theory & Skill Assessment Student',
     quote: 'Clean distraction-free interface and seamless bilingual support. Exactly what I needed for systematic exam practice.',
     rating: 5,
