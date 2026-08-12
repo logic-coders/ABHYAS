@@ -12,10 +12,10 @@ export async function GET() {
   try {
     const series = await getAllTestSeries();
     return NextResponse.json(series);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to fetch test series:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch test series' },
+      { error: 'Failed to fetch test series: ' + (error.message || String(error)) },
       { status: 500 }
     );
   }
