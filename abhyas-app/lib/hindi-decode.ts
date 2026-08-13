@@ -11,7 +11,7 @@ export function decodeHindi(text: string): string {
   res = res.replace(/\{([^\{\s])([\$\>]?)(«?)/g, "$1$2$3ि");
 
   const map: Record<string, string> = {
-    // Special combined words / matras
+    // Special combined words / matras / ligatures
     "{Îm": "त्ति",
     "H$mo": "को",
     "Ho$": "के",
@@ -55,16 +55,24 @@ export function decodeHindi(text: string): string {
     "Îm": "त्त",
     "Q>": "ट",
     "Q": "ट",
+    "R>": "ठ",
+    "R": "ठ",
     "S": "ड",
     "N>": "छ",
     "S²>": "ड्",
     "‹S>": "ड़",
+    "‹R>": "ढ़",
     "ÊR>": "ण्ठ",
     "ï>": "ष्ट",
+    "í>": "ष्ट",
+    "í": "श्",
     "¾": "ग्न",
     "º": "क्त्",
     "³": "क्",
+    "Š": "क्",
     "Ü": "ध्",
+    "Þ": "ध्",
+    "Ú": "द्य",
     "„": "ल्ल",
     "œ": "श्व",
     "ë": "ल्",
@@ -79,6 +87,7 @@ export function decodeHindi(text: string): string {
     "å": "म्",
     "»": "ख्",
     "ì": "व्",
+    "_": "म",
 
     // Base characters
     "A": "अ",
