@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface ExamTimerProps {
   seriesId: string;
@@ -12,17 +12,31 @@ const EXAM_DURATION_MS = 80 * 60 * 1000; // 1 hour 20 minutes
 export default function ExamTimer({ seriesId, onTimeUp }: ExamTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number>(EXAM_DURATION_MS);
   
+  const onTimeUpRef = useRef(onTimeUp);
+  useEffect(() => {
+    onTimeUpRef.current = onTimeUp;
+  }, [onTimeUp]);
+
   useEffect(() => {
     // Check if end time is already set
     const storageKey = `exam_end_time_${seriesId}`;
     let endTimeStr = sessionStorage.getItem(storageKey);
     let endTime: number;
 
+    const now = Date.now();
     if (endTimeStr) {
-      endTime = parseInt(endTimeStr, 10);
+      const parsed = parseInt(endTimeStr, 10);
+      // If valid and still in the future, use it. Otherwise reset stale timer.
+      if (!isNaN(parsed) && parsed > now) {
+        endTime = parsed;
+      } else {
+        sessionStorage.removeItem(storageKey);
+        endTime = now + EXAM_DURATION_MS;
+        sessionStorage.setItem(storageKey, endTime.toString());
+      }
     } else {
       // Set end time for the first time
-      endTime = Date.now() + EXAM_DURATION_MS;
+      endTime = now + EXAM_DURATION_MS;
       sessionStorage.setItem(storageKey, endTime.toString());
     }
 
@@ -32,7 +46,7 @@ export default function ExamTimer({ seriesId, onTimeUp }: ExamTimerProps) {
       if (remaining <= 0) {
         setTimeLeft(0);
         clearInterval(interval);
-        onTimeUp();
+        onTimeUpRef.current();
       } else {
         setTimeLeft(remaining);
       }
@@ -42,13 +56,13 @@ export default function ExamTimer({ seriesId, onTimeUp }: ExamTimerProps) {
     const remaining = endTime - Date.now();
     if (remaining <= 0) {
       setTimeLeft(0);
-      onTimeUp();
+      onTimeUpRef.current();
     } else {
       setTimeLeft(remaining);
     }
 
     return () => clearInterval(interval);
-  }, [seriesId, onTimeUp]);
+  }, [seriesId]);
 
   // Format time (HH:MM:SS)
   const formatTime = (ms: number) => {

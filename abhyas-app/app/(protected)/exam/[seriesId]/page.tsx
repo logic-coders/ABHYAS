@@ -122,7 +122,7 @@ export default function ExamPage() {
     }
   }, [examData, currentIndex, isTimeUp, isSubmitting]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!examData || isSubmitting) return;
     setIsSubmitting(true);
 
@@ -148,6 +148,9 @@ export default function ExamPage() {
 
       const result: ExamResult = await res.json();
 
+      // Clear timer key upon successful submission
+      sessionStorage.removeItem(`exam_end_time_${seriesId}`);
+
       // Exit fullscreen mode upon submitting test
       if (typeof document !== 'undefined' && document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
@@ -164,7 +167,7 @@ export default function ExamPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [examData, isSubmitting, answers, seriesId, language]);
 
   const handleTimeUp = useCallback(() => {
     setIsTimeUp(true);
@@ -200,6 +203,8 @@ export default function ExamPage() {
   }, [hasAcceptedDisclaimer, examResult]);
 
   const handleAcceptDisclaimer = () => {
+    // Clear any stale timer from a previous attempt before starting a fresh attempt
+    sessionStorage.removeItem(`exam_end_time_${seriesId}`);
     setHasAcceptedDisclaimer(true);
     // Request fullscreen on accepting disclaimer
     if (typeof document !== 'undefined' && document.documentElement.requestFullscreen) {
