@@ -7,8 +7,33 @@ const JWT_SECRET = process.env.JWT_SECRET || 'abhyas-dev-secret-change-in-produc
 const COOKIE_NAME = 'abhyas-token';
 const TOKEN_EXPIRY = '7d'; // 7 days
 
-// Whitelisted admin emails
-export const ADMIN_EMAILS = ['chandansingh15102000@gmail.com'];
+// Whitelisted admin emails read dynamically from environment variables (ADMIN_EMAILS or ADMIN_EMAIL)
+export function getAdminEmails(): string[] {
+  const envEmails = process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL;
+  if (envEmails) {
+    return envEmails.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+  }
+  return ['chandansingh15102000@gmail.com'];
+}
+
+export function isAdminEmail(email: string): boolean {
+  if (!email) return false;
+  return getAdminEmails().includes(email.toLowerCase().trim());
+}
+
+export const ADMIN_EMAILS = new Proxy([] as string[], {
+  get(_target, prop) {
+    const list = getAdminEmails();
+    if (prop === 'includes') {
+      return (searchElement: string) => isAdminEmail(searchElement);
+    }
+    if (prop === 'length') {
+      return list.length;
+    }
+    const val = Reflect.get(list, prop);
+    return typeof val === 'function' ? val.bind(list) : val;
+  },
+});
 
 /* ─── JWT utilities ─── */
 
@@ -79,9 +104,9 @@ export async function getCurrentUser(request: NextRequest): Promise<SafeUser | n
  * Strip sensitive fields from a User to produce a SafeUser.
  */
 export function toSafeUser(user: User): SafeUser {
-  const isAdminEmail = ADMIN_EMAILS.includes(user.email.toLowerCase().trim());
-  const role = isAdminEmail ? 'admin' : (user.role || 'user');
-  const accountStatus = isAdminEmail ? 'APPROVED' : (user.accountStatus || 'PENDING');
+  const isAdmin = isAdminEmail(user.email);
+  const role = isAdmin ? 'admin' : (user.role || 'user');
+  const accountStatus = isAdmin ? 'APPROVED' : (user.accountStatus || 'PENDING');
   return {
     id: user.id,
     name: user.name,

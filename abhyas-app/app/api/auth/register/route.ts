@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { addUser } from '@/lib/user-store';
-import { createToken, setAuthCookie, toSafeUser, ADMIN_EMAILS } from '@/lib/auth';
+import { createToken, setAuthCookie, toSafeUser, isAdminEmail } from '@/lib/auth';
 import { hashPassword } from '@/lib/password';
 import { User } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -49,15 +49,15 @@ export async function POST(request: Request) {
     // Hash password and create user
     const passwordHash = await hashPassword(password);
     const normalizedEmail = email.toLowerCase().trim();
-    const isAdminEmail = ADMIN_EMAILS.includes(normalizedEmail);
+    const isAdmin = isAdminEmail(normalizedEmail);
 
     const user: User = {
       id: uuidv4(),
       name: name.trim(),
       email: normalizedEmail,
       passwordHash,
-      role: isAdminEmail ? 'admin' : 'user',
-      accountStatus: isAdminEmail ? 'APPROVED' : 'PENDING',
+      role: isAdmin ? 'admin' : 'user',
+      accountStatus: isAdmin ? 'APPROVED' : 'PENDING',
       createdAt: new Date().toISOString(),
     };
 
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const safeUser = toSafeUser(user);
 
     // If admin email, auto-login immediately
-    if (isAdminEmail) {
+    if (isAdmin) {
       const token = await createToken(safeUser);
       const response = NextResponse.json(
         { message: 'Registration successful. Admin account active.', user: safeUser },
