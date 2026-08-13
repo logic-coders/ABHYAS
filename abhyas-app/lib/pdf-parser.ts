@@ -1,6 +1,7 @@
 import pdfParse from 'pdf-parse';
 import { Question } from './types';
 import { decodeHindi } from './hindi-decode';
+import { applyHindiCorrections } from './hindi-corrections';
 
 export type Language = 'en' | 'hi';
 
@@ -110,13 +111,13 @@ export function parseQuestions(
     const parsed = parseQuestionBlock(num, block);
     if (parsed) {
       if (language === 'hi') {
-        parsed.text = decodeHindi(parsed.text);
+        parsed.text = applyHindiCorrections(decodeHindi(parsed.text));
         parsed.options = parsed.options.map((o) => {
           const m = o.match(/^([(\s]*[A-Ja-j][).:\s]*)([\s\S]*)$/);
           if (m) {
-            return m[1] + decodeHindi(m[2]);
+            return m[1] + applyHindiCorrections(decodeHindi(m[2]));
           }
-          return decodeHindi(o);
+          return applyHindiCorrections(decodeHindi(o));
         });
       }
       questions.push(parsed);
