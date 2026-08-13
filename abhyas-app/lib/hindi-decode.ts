@@ -120,6 +120,8 @@ export function decodeHindi(text: string): string {
     "K": "घ",
     "P": "झ",
     "z": "ू",
+    "Á": "जि",
+    "™": "ख्",
     "J": "ग",
     "W": "थ",
     "Y": "ध",
