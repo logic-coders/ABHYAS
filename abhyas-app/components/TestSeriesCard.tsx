@@ -14,10 +14,14 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
   const icon = isQuiz ? '⚡' : SUBJECT_ICONS[series.subject];
   
   const questionCount = isQuiz
-    ? (series.randomQuestions?.length || 20)
+    ? (series.manualQuestions?.length || series.randomQuestions?.length || 20)
     : series.isRandom
       ? (series.randomQuestions?.length || 80)
-      : (series.endQuestion - series.startQuestion + 1);
+      : series.manualQuestions?.length
+        ? series.manualQuestions.length
+        : (typeof series.endQuestion === 'number' && typeof series.startQuestion === 'number'
+            ? series.endQuestion - series.startQuestion + 1
+            : 80);
 
   // Strip any trailing date strings (e.g. "- 8/10/2026") from title
   const cleanTitle = series.title.replace(/\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}/, '');

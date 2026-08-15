@@ -17,6 +17,10 @@ function toPlainTestSeries(doc: any): TestSeriesType {
     format: (doc.format as ExamFormat) || (doc.isQuiz ? 'quiz' : 'test'),
     isQuiz: Boolean(doc.isQuiz),
     durationPerQuestion: doc.durationPerQuestion || 30,
+    isManual: Boolean(doc.isManual),
+    manualQuestions: doc.manualQuestions,
+    isDailyStreak: Boolean(doc.isDailyStreak),
+    streakDate: doc.streakDate,
   };
 }
 

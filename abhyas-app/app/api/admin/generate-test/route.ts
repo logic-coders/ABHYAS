@@ -23,10 +23,12 @@ export async function POST(request: NextRequest) {
     const allSeries = await getAllTestSeries();
     const subjectSeries = allSeries.filter((s) => s.subject === subject && !s.isRandom);
 
-    let fullPool: { s3Key: string, number: number }[] = [];
+    let fullPool: { s3Key: string; number: number }[] = [];
     for (const series of subjectSeries) {
-      for (let i = series.startQuestion; i <= series.endQuestion; i++) {
-        fullPool.push({ s3Key: series.s3Key, number: i });
+      if (series.s3Key && typeof series.startQuestion === 'number' && typeof series.endQuestion === 'number') {
+        for (let i = series.startQuestion; i <= series.endQuestion; i++) {
+          fullPool.push({ s3Key: series.s3Key, number: i });
+        }
       }
     }
 

@@ -20,20 +20,31 @@ export const SUBJECT_COLORS: Record<Subject, string> = {
 
 export type ExamFormat = 'test' | 'quiz';
 
+export interface ManualQuestion {
+  number: number;
+  text: string;
+  options: string[]; // ["A. ...", "B. ...", "C. ...", "D. ..."]
+  correctAnswer: string; // "A" | "B" | "C" | "D"
+}
+
 /** Metadata for a test series or speed quiz, stored in S3/DB as JSON */
 export interface TestSeries {
   id: string;
   title: string;
   subject: Subject;
-  s3Key: string;
-  startQuestion: number;
-  endQuestion: number;
+  s3Key?: string;
+  startQuestion?: number;
+  endQuestion?: number;
   createdAt: string; // ISO date string
   isRandom?: boolean;
-  randomQuestions?: { s3Key: string, number: number }[];
+  randomQuestions?: { s3Key: string; number: number }[];
   format?: ExamFormat;
   isQuiz?: boolean;
   durationPerQuestion?: number; // In seconds (default: 30 for quiz)
+  isManual?: boolean;
+  manualQuestions?: ManualQuestion[];
+  isDailyStreak?: boolean;
+  streakDate?: string; // "YYYY-MM-DD"
 }
 
 /** A single parsed question (options only — no answer exposed to client) */
@@ -78,7 +89,7 @@ export interface ExamResult {
 export type UserRole = 'admin' | 'user';
 export type AccountStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
-/** Full user record stored in S3 (includes password hash) */
+/** Full user record stored in S3/DB (includes password hash) */
 export interface User {
   id: string;
   name: string;
@@ -89,6 +100,10 @@ export interface User {
   createdAt: string; // ISO date string
   resetOtp?: string;
   resetOtpExpiry?: string;
+  currentStreak?: number;
+  longestStreak?: number;
+  lastStreakDate?: string;
+  streakHistory?: string[];
 }
 
 /** Safe user sent to the client (no password hash) */
@@ -98,4 +113,8 @@ export interface SafeUser {
   email: string;
   role: UserRole;
   accountStatus: AccountStatus;
+  currentStreak?: number;
+  longestStreak?: number;
+  lastStreakDate?: string;
+  streakHistory?: string[];
 }

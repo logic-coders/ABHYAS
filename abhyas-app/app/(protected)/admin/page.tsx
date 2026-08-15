@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import AdminForm from '@/components/AdminForm';
+import AdminQuizManager from '@/components/admin/AdminQuizManager';
+import AdminStreakManager from '@/components/admin/AdminStreakManager';
 import UserApprovals from '@/components/UserApprovals';
 import UserDatabase from '@/components/admin/UserDatabase';
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'tests' | 'users' | 'database'>('tests');
+  const [activeTab, setActiveTab] = useState<'tests' | 'quiz' | 'streak' | 'users' | 'database'>('quiz');
 
   return (
     <div className="container page-wrapper">
@@ -15,7 +17,7 @@ export default function AdminPage() {
           ⚙️ Admin Dashboard
         </h1>
         <p className="admin-description">
-          Manage test series and user registrations.
+          Create test series & speed quizzes, manage daily streaks, and administer user registrations.
         </p>
       </div>
 
@@ -24,30 +26,44 @@ export default function AdminPage() {
           className={`tab-btn ${activeTab === 'tests' ? 'active' : ''}`}
           onClick={() => setActiveTab('tests')}
         >
-          Create Test Series
+          📝 Create Test Series
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'quiz' ? 'active' : ''}`}
+          onClick={() => setActiveTab('quiz')}
+        >
+          ⚡ Create Quiz
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'streak' ? 'active' : ''}`}
+          onClick={() => setActiveTab('streak')}
+        >
+          🔥 Daily Streak
         </button>
         <button 
           className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
           onClick={() => setActiveTab('users')}
         >
-          User Approvals
+          👥 User Approvals
         </button>
         <button 
           className={`tab-btn ${activeTab === 'database' ? 'active' : ''}`}
           onClick={() => setActiveTab('database')}
         >
-          User Database
+          🗄️ User Database
         </button>
       </div>
 
       {activeTab === 'tests' && <AdminForm />}
+      {activeTab === 'quiz' && <AdminQuizManager />}
+      {activeTab === 'streak' && <AdminStreakManager />}
       {activeTab === 'users' && <UserApprovals />}
       {activeTab === 'database' && <UserDatabase />}
 
       <style jsx>{`
         .admin-header {
           margin-bottom: 2rem;
-          max-width: 600px;
+          max-width: 650px;
           animation: fadeInUp 0.5s ease;
         }
 
@@ -59,26 +75,31 @@ export default function AdminPage() {
 
         .admin-tabs {
           display: flex;
-          gap: 1rem;
+          gap: 0.5rem;
           margin-bottom: 2rem;
           border-bottom: 1px solid var(--border-subtle);
           padding-bottom: 0.5rem;
+          overflow-x: auto;
+          scrollbar-width: none;
         }
 
         .tab-btn {
           background: none;
           border: none;
-          padding: 0.5rem 1rem;
-          font-size: 1rem;
-          font-weight: 600;
+          padding: 0.6rem 1rem;
+          font-size: 0.95rem;
+          font-weight: 700;
           color: var(--text-muted);
           cursor: pointer;
           position: relative;
-          transition: color 0.2s ease;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+          border-radius: var(--radius-sm);
         }
 
         .tab-btn:hover {
           color: var(--text-primary);
+          background: var(--bg-card);
         }
 
         .tab-btn.active {
@@ -89,8 +110,8 @@ export default function AdminPage() {
           content: '';
           position: absolute;
           bottom: -0.6rem;
-          left: 0;
-          right: 0;
+          left: 0.5rem;
+          right: 0.5rem;
           height: 3px;
           background: var(--accent-gradient);
           border-radius: 3px 3px 0 0;

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTestSeriesById } from '@/lib/metadata-store';
 import { downloadPDF } from '@/lib/s3';
 import { extractText, parseQuestions, parseAnswers, Language } from '@/lib/pdf-parser';
-import { ExamAnswer, ExamResult, ResultItem } from '@/lib/types';
+import { ExamAnswer, ExamResult, ResultItem, Question } from '@/lib/types';
 import { addResult } from '@/lib/result-store';
 import { getCurrentUser } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
@@ -43,9 +43,18 @@ export async function POST(
 
     // Parse correct answers and questions
     let correctAnswers = new Map<number, string>();
-    let questions = [];
+    let questions: Question[] = [];
 
-    if (series.isRandom && series.randomQuestions) {
+    if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
+      questions = series.manualQuestions.map((q) => ({
+        number: q.number,
+        text: q.text,
+        options: q.options,
+      }));
+      for (const q of series.manualQuestions) {
+        correctAnswers.set(q.number, (q.correctAnswer || '').toUpperCase());
+      }
+    } else if (series.isRandom && series.randomQuestions) {
       const groupedByS3Key = new Map<string, number[]>();
       for (const rq of series.randomQuestions) {
         if (!groupedByS3Key.has(rq.s3Key)) {
@@ -87,12 +96,12 @@ export async function POST(
         }
       });
 
-    } else {
+    } else if (series.s3Key) {
       // Download single PDF from S3
       const pdfBuffer = await downloadPDF(series.s3Key);
       const text = await extractText(pdfBuffer);
-      correctAnswers = parseAnswers(text, series.startQuestion, series.endQuestion);
-      questions = parseQuestions(text, series.startQuestion, series.endQuestion, lang);
+      correctAnswers = parseAnswers(text, series.startQuestion || 1, series.endQuestion || 20);
+      questions = parseQuestions(text, series.startQuestion || 1, series.endQuestion || 20, lang);
     }
 
     // Build a lookup for user answers
@@ -148,7 +157,7 @@ export async function POST(
       breakdown,
     };
 
-    // Save result to store
+    // Save result to store and update streak if applicable
     const user = await getCurrentUser(request);
     if (user) {
       await addResult({
@@ -167,6 +176,41 @@ export async function POST(
         date: new Date().toISOString(),
         breakdown,
       });
+
+      // If this was a daily streak quiz, update user's streak
+      if (series.isDailyStreak) {
+        const { getUserById, updateUser } = await import('@/lib/user-store');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+        const fullUser = await getUserById(user.id);
+        if (fullUser) {
+          let newCurrentStreak = fullUser.currentStreak || 0;
+          let newLongestStreak = fullUser.longestStreak || 0;
+          const history = fullUser.streakHistory || [];
+
+          if (fullUser.lastStreakDate === todayStr) {
+            // Already completed today, keep streak
+          } else if (fullUser.lastStreakDate === yesterdayStr) {
+            newCurrentStreak += 1;
+          } else {
+            newCurrentStreak = 1;
+          }
+
+          if (newCurrentStreak > newLongestStreak) {
+            newLongestStreak = newCurrentStreak;
+          }
+
+          const newHistory = history.includes(todayStr) ? history : [...history, todayStr];
+
+          await updateUser(user.id, {
+            currentStreak: newCurrentStreak,
+            longestStreak: newLongestStreak,
+            lastStreakDate: todayStr,
+            streakHistory: newHistory,
+          });
+        }
+      }
     }
 
     return NextResponse.json(result);

@@ -25,8 +25,10 @@ export async function POST(request: NextRequest) {
 
     let fullPool: { s3Key: string; number: number }[] = [];
     for (const series of subjectSeries) {
-      for (let i = series.startQuestion; i <= series.endQuestion; i++) {
-        fullPool.push({ s3Key: series.s3Key, number: i });
+      if (series.s3Key && typeof series.startQuestion === 'number' && typeof series.endQuestion === 'number') {
+        for (let i = series.startQuestion; i <= series.endQuestion; i++) {
+          fullPool.push({ s3Key: series.s3Key, number: i });
+        }
       }
     }
 

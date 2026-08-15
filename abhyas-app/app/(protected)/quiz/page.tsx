@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { TestSeries, Subject } from '@/lib/types';
 import SubjectFilter from '@/components/SubjectFilter';
 import TestSeriesCard from '@/components/TestSeriesCard';
@@ -14,8 +15,17 @@ export default function QuizDashboardPage() {
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState<Subject | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Streak state
+  const [streakData, setStreakData] = useState<{
+    streak: { currentStreak: number; longestStreak: number; lastStreakDate: string | null; isTodayCompleted: boolean };
+    todaySubject: Subject;
+    streakDate: string;
+    streakQuiz: { id: string; title: string; subject: Subject; durationPerQuestion: number } | null;
+  } | null>(null);
+
   useEffect(() => {
     fetchQuizzes();
+    fetchStreakInfo();
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const subj = params.get('subject');
@@ -38,6 +48,17 @@ export default function QuizDashboardPage() {
       setError('Failed to load speed quizzes. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchStreakInfo = async () => {
+    try {
+      const res = await fetch('/api/streak');
+      if (!res.ok) return;
+      const data = await res.json();
+      setStreakData(data);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -80,6 +101,45 @@ export default function QuizDashboardPage() {
         <p className="header-desc">
           High-yield rapid quizzes designed to test instant recall, reaction time, and precision under pressure.
         </p>
+
+        {/* ── Daily Streak Banner ── */}
+        {streakData && (
+          <div className="daily-streak-banner">
+            <div className="streak-left">
+              <div className="streak-tag-row">
+                <span className="streak-pill">🔥 DAILY STREAK QUIZ</span>
+                <span className="streak-subject-tag">Today: {streakData.todaySubject}</span>
+              </div>
+              <h2 className="streak-title">
+                {streakData.streakQuiz ? streakData.streakQuiz.title : `Today's ${streakData.todaySubject} Challenge`}
+              </h2>
+              <p className="streak-desc">
+                {streakData.streak.isTodayCompleted
+                  ? '🎉 Streak completed for today! Keep the momentum alive tomorrow.'
+                  : `Complete today's 20 questions to maintain your ${streakData.streak.currentStreak}-day streak!`}
+              </p>
+            </div>
+
+            <div className="streak-right">
+              {streakData.streakQuiz ? (
+                <Link
+                  href={`/quiz/${streakData.streakQuiz.id}`}
+                  className={`btn ${streakData.streak.isTodayCompleted ? 'btn-secondary' : 'btn-streak-cta'}`}
+                >
+                  {streakData.streak.isTodayCompleted ? '🔁 Retake Streak Quiz' : '⚡ Start Streak Quiz →'}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-streak-cta"
+                  onClick={() => handleStartInstantQuiz(streakData.todaySubject)}
+                >
+                  ⚡ Start {streakData.todaySubject} Blitz →
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Instant Speed Quiz Quick Launcher Banner */}
         <div className="instant-quiz-banner">
@@ -186,6 +246,85 @@ export default function QuizDashboardPage() {
           margin: 0 auto 2rem auto;
         }
 
+        /* ── Daily Streak Banner ── */
+        .daily-streak-banner {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.12));
+          border: 1px solid rgba(239, 68, 68, 0.35);
+          border-radius: var(--radius-xl);
+          padding: 1.75rem 2rem;
+          margin: 0 auto 1.5rem auto;
+          max-width: 860px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 1.5rem;
+          text-align: left;
+        }
+
+        .streak-left {
+          flex: 1;
+          min-width: 280px;
+        }
+
+        .streak-tag-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.4rem;
+        }
+
+        .streak-pill {
+          font-size: 0.72rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.15);
+          padding: 0.2rem 0.6rem;
+          border-radius: var(--radius-full);
+        }
+
+        .streak-subject-tag {
+          font-size: 0.72rem;
+          font-weight: 800;
+          color: #f59e0b;
+          background: rgba(245, 158, 11, 0.15);
+          padding: 0.2rem 0.6rem;
+          border-radius: var(--radius-full);
+        }
+
+        .streak-title {
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: var(--text-primary);
+          margin-bottom: 0.25rem;
+        }
+
+        .streak-desc {
+          font-size: 0.88rem;
+          color: var(--text-secondary);
+          margin: 0;
+        }
+
+        .btn-streak-cta {
+          background: linear-gradient(135deg, #ef4444, #f59e0b);
+          color: #ffffff;
+          border: none;
+          padding: 0.75rem 1.4rem;
+          font-size: 0.95rem;
+          font-weight: 800;
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          display: inline-block;
+        }
+
+        .btn-streak-cta:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
+        }
+
         /* ── Instant Quiz Banner ── */
         .instant-quiz-banner {
           background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(236, 72, 153, 0.08));
@@ -275,10 +414,14 @@ export default function QuizDashboardPage() {
         }
 
         @media (max-width: 768px) {
+          .daily-streak-banner,
           .instant-quiz-banner {
             flex-direction: column;
             text-align: center;
             padding: 1.25rem;
+          }
+          .streak-tag-row {
+            justify-content: center;
           }
           .banner-actions {
             justify-content: center;

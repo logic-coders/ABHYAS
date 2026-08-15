@@ -10,6 +10,10 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: String, required: true },
   resetOtp: { type: String },
   resetOtpExpiry: { type: String },
+  currentStreak: { type: Number, default: 0 },
+  longestStreak: { type: Number, default: 0 },
+  lastStreakDate: { type: String },
+  streakHistory: [{ type: String }],
 });
 
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);

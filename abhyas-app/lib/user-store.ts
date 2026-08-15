@@ -5,7 +5,6 @@ import { User } from './models/User';
 const MAX_USERS = 10;
 const MAX_ADMINS = 2;
 
-// Helper to convert Mongoose document to plain object
 function toPlainUser(doc: any): UserType {
   return {
     id: doc.id,
@@ -17,6 +16,10 @@ function toPlainUser(doc: any): UserType {
     createdAt: doc.createdAt,
     resetOtp: doc.resetOtp,
     resetOtpExpiry: doc.resetOtpExpiry,
+    currentStreak: doc.currentStreak || 0,
+    longestStreak: doc.longestStreak || 0,
+    lastStreakDate: doc.lastStreakDate,
+    streakHistory: doc.streakHistory || [],
   };
 }
 

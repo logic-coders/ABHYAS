@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTestSeriesById } from '@/lib/metadata-store';
 import { downloadPDF } from '@/lib/s3';
 import { extractText, parseQuestions, Language } from '@/lib/pdf-parser';
+import { Question } from '@/lib/types';
 
 /**
  * GET /api/exam/[seriesId]/questions?lang=en|hi
@@ -27,9 +28,16 @@ export async function GET(
     const url = new URL(request.url);
     const lang = (url.searchParams.get('lang') || 'en') as Language;
 
-    let questions = [];
+    let questions: Question[] = [];
 
-    if (series.isRandom && series.randomQuestions) {
+    if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
+      // Manual entry quiz
+      questions = series.manualQuestions.map((q) => ({
+        number: q.number,
+        text: q.text,
+        options: q.options,
+      }));
+    } else if (series.isRandom && series.randomQuestions) {
       // Group by S3 Key to minimize downloads
       const groupedByS3Key = new Map<string, number[]>();
       for (const rq of series.randomQuestions) {
@@ -57,11 +65,11 @@ export async function GET(
       
       // Remap question numbers 1..N based on the random order
       questions = rawQuestions.map((q, idx) => ({ ...q, number: idx + 1 }));
-    } else {
+    } else if (series.s3Key) {
       // Regular single-PDF test series
       const pdfBuffer = await downloadPDF(series.s3Key);
       const text = await extractText(pdfBuffer);
-      questions = parseQuestions(text, series.startQuestion, series.endQuestion, lang);
+      questions = parseQuestions(text, series.startQuestion || 1, series.endQuestion || 20, lang);
     }
 
     if (questions.length === 0) {
