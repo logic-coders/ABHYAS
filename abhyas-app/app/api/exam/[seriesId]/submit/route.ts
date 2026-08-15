@@ -133,6 +133,8 @@ export async function POST(
     const totalQuestions = questions.length;
     const percentage = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0;
 
+    const format = series.format || (series.isQuiz ? 'quiz' : 'test');
+
     const result: ExamResult = {
       seriesId: series.id,
       seriesTitle: series.title,
@@ -142,6 +144,7 @@ export async function POST(
       incorrect,
       unanswered,
       percentage,
+      format,
       breakdown,
     };
 
@@ -160,6 +163,7 @@ export async function POST(
         unanswered,
         totalQuestions,
         percentage,
+        format,
         date: new Date().toISOString(),
         breakdown,
       });

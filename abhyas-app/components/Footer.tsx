@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation';
 export default function Footer() {
   const pathname = usePathname();
 
-  // Hide footer on exam pages for distraction-free exam mode
-  if (pathname?.startsWith('/exam')) {
+  // Hide footer on exam and quiz pages for distraction-free arena
+  if (pathname?.startsWith('/exam') || pathname?.startsWith('/quiz')) {
     return null;
   }
 

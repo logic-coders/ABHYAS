@@ -1,4 +1,4 @@
-import { TestSeries as TestSeriesType } from './types';
+import { TestSeries as TestSeriesType, ExamFormat } from './types';
 import connectToDatabase from './mongoose';
 import { TestSeries } from './models/TestSeries';
 import { UsedQuestion } from './models/UsedQuestion';
@@ -14,6 +14,9 @@ function toPlainTestSeries(doc: any): TestSeriesType {
     createdAt: doc.createdAt,
     isRandom: doc.isRandom,
     randomQuestions: doc.randomQuestions,
+    format: (doc.format as ExamFormat) || (doc.isQuiz ? 'quiz' : 'test'),
+    isQuiz: Boolean(doc.isQuiz),
+    durationPerQuestion: doc.durationPerQuestion || 30,
   };
 }
 
@@ -58,9 +61,5 @@ export async function markQuestionsAsUsed(subject: string, questions: { s3Key: s
 
 export async function clearUsedQuestions(subject: string): Promise<void> {
   await connectToDatabase();
-  await UsedQuestion.findOneAndUpdate(
-    { subject },
-    { keys: [] },
-    { upsert: true }
-  );
+  await UsedQuestion.deleteOne({ subject });
 }

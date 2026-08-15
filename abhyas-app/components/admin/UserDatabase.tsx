@@ -76,16 +76,31 @@ export default function UserDatabase() {
                     <p className="empty-text" style={{ margin: 0 }}>This user hasn't taken any tests yet.</p>
                   ) : (
                     <div className="test-history-grid">
-                      {user.results.map(result => (
-                        <div key={result.id} className="test-result-item">
-                          <div className="test-title">{result.seriesTitle}</div>
-                          <div className="test-subject">{result.subject}</div>
-                          <div className="test-stats">
-                            <span className="score">Score: {result.score}/{result.totalQuestions} ({Math.round(result.percentage)}%)</span>
-                            <span className="date">{new Date(result.date).toLocaleDateString()}</span>
+                      {user.results.map(result => {
+                        const isQuiz = result.format === 'quiz' || result.totalQuestions <= 20;
+                        return (
+                          <div key={result.id} className="test-result-item">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                              <div className="test-title">{result.seriesTitle}</div>
+                              <span style={{
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                padding: '0.1rem 0.4rem',
+                                borderRadius: '999px',
+                                color: isQuiz ? '#f59e0b' : '#3b82f6',
+                                background: isQuiz ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)'
+                              }}>
+                                {isQuiz ? '⚡ QUIZ' : '📝 TEST'}
+                              </span>
+                            </div>
+                            <div className="test-subject">{result.subject}</div>
+                            <div className="test-stats">
+                              <span className="score">Score: {result.score}/{result.totalQuestions} ({Math.round(result.percentage)}%)</span>
+                              <span className="date">{new Date(result.date).toLocaleDateString()}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

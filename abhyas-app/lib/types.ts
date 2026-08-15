@@ -18,7 +18,9 @@ export const SUBJECT_COLORS: Record<Subject, string> = {
   Geography: '#10b981',
 };
 
-/** Metadata for a test series, stored in S3 as JSON */
+export type ExamFormat = 'test' | 'quiz';
+
+/** Metadata for a test series or speed quiz, stored in S3/DB as JSON */
 export interface TestSeries {
   id: string;
   title: string;
@@ -29,6 +31,9 @@ export interface TestSeries {
   createdAt: string; // ISO date string
   isRandom?: boolean;
   randomQuestions?: { s3Key: string, number: number }[];
+  format?: ExamFormat;
+  isQuiz?: boolean;
+  durationPerQuestion?: number; // In seconds (default: 30 for quiz)
 }
 
 /** A single parsed question (options only — no answer exposed to client) */
@@ -41,7 +46,7 @@ export interface Question {
 /** A user's answer for one question */
 export interface ExamAnswer {
   questionNumber: number;
-  selectedOption: string; // "A" | "B" | "C" | "D"
+  selectedOption: string; // "A" | "B" | "C" | "D" | "E"
 }
 
 /** Breakdown for a single question in results */
@@ -65,6 +70,7 @@ export interface ExamResult {
   unanswered: number;
   percentage: number;
   breakdown: ResultItem[];
+  format?: ExamFormat;
 }
 
 /* ─── Phase II: Authentication types ─── */

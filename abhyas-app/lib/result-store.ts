@@ -1,4 +1,4 @@
-import { Subject } from './types';
+import { Subject, ExamFormat } from './types';
 import connectToDatabase from './mongoose';
 import { Result } from './models/Result';
 
@@ -14,6 +14,7 @@ export interface TestResultSummary {
   unanswered: number;
   totalQuestions: number;
   percentage: number;
+  format?: ExamFormat;
   date: string; // ISO string
   breakdown?: import('./types').ResultItem[];
 }
@@ -32,6 +33,7 @@ function toPlainResult(doc: any): TestResultSummary {
     unanswered: doc.unanswered,
     totalQuestions: doc.totalQuestions,
     percentage: doc.percentage,
+    format: (doc.format as ExamFormat) || 'test',
     date: doc.date,
     breakdown: doc.breakdown,
   };

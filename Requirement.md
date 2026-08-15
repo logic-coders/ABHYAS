@@ -226,13 +226,18 @@ Admin creates a **Test Series** by filling in:
 - Theme preference persists across sessions in `localStorage`.
 - Comprehensive design tokens and styling across Landing Page, Tests Page, Exam Page, Profile Page, Admin Page, Login/Register, and Modals.
 
-### 28. Confirm Exam Page Layout — Question Navigator, Submit, and Timer
-- The question number navigator (right-side panel), Submit Exam button, and Timer follow the reference layout:
-  - Circular/rounded numbered navigator with 5 states: Green (Answered), Red (Not Answered), Gray (Not Visited), Purple (Marked for Review), and Purple with Green indicator (Ans & Marked for Review).
-  - Prominent digital timer displaying `TIME REMAINING` at the top of the right panel.
-  - Action bar with `Mark for Review & Next`, `Clear Response`, `← Previous`, `Save & Next →`, and prominent `Submit Test`.
-  - Question Palette panel footer with `Finish & View Scorecard`.
-- **Submission Behavior**: The user can submit at any time regardless of how many questions have been answered (0 to N questions). Submission is never blocked by incomplete answers.
+### 30. Quiz Format — 20 Questions, 30-Second Timer Per Question
+- **Structure**: A Quiz consists of 20 high-yield questions (distinct from the standard 80-question full exam format).
+- **30-Second Timer Per Question**:
+  - Each question has its own dedicated 30-second countdown timer.
+  - Timer starts immediately as soon as the question is displayed.
+  - If the user does not answer within 30 seconds, the question is automatically marked as skipped/unanswered, and the quiz auto-advances to the next question.
+  - Selecting an answer and clicking `Next Question →` immediately moves to the next question and resets the 30-second timer.
+- **Forward-Only Navigation**: Speed quiz is forward-only (no back navigation).
+- **Auto Scoreboard**: On completing or timing out on Question 20, the quiz automatically scores and redirects to the Result Scoreboard page with correct/incorrect/skipped breakdown and score percentage.
+- **Instant Launcher & Filter**: Quick-launch buttons on the `/tests` page allow starting an instant 20-question blitz quiz for any subject with automatic deduplication.
+- **Test History & Badging**: Speed Quiz attempts are badged with `⚡ SPEED QUIZ` in Test History and Admin User Database.
+
 
 ## Tech Stack
 Next.js, React, CSS Modules

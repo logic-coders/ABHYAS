@@ -21,6 +21,7 @@ const ResultSchema = new mongoose.Schema({
   unanswered: { type: Number },
   totalQuestions: { type: Number },
   percentage: { type: Number },
+  format: { type: String, default: 'test' },
   date: { type: String, required: true },
   breakdown: [ResultItemSchema],
 });

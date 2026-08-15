@@ -9,17 +9,22 @@ interface TestSeriesCardProps {
 }
 
 export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
-  const subjectColor = SUBJECT_COLORS[series.subject];
-  const icon = SUBJECT_ICONS[series.subject];
-  const questionCount = series.isRandom
-    ? (series.randomQuestions?.length || 80)
-    : (series.endQuestion - series.startQuestion + 1);
+  const isQuiz = series.isQuiz || series.format === 'quiz';
+  const subjectColor = isQuiz ? '#f59e0b' : SUBJECT_COLORS[series.subject];
+  const icon = isQuiz ? '⚡' : SUBJECT_ICONS[series.subject];
+  
+  const questionCount = isQuiz
+    ? (series.randomQuestions?.length || 20)
+    : series.isRandom
+      ? (series.randomQuestions?.length || 80)
+      : (series.endQuestion - series.startQuestion + 1);
 
   // Strip any trailing date strings (e.g. "- 8/10/2026") from title
   const cleanTitle = series.title.replace(/\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}/, '');
+  const destination = isQuiz ? `/quiz/${series.id}` : `/exam/${series.id}`;
 
   return (
-    <Link href={`/exam/${series.id}`} className="card-link">
+    <Link href={destination} className="card-link">
       <div
         className="glass-card test-card"
         style={
@@ -35,16 +40,21 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
         {/* Header */}
         <div className="card-header">
           <span className="card-icon">{icon}</span>
-          <span
-            className="badge"
-            style={{
-              color: subjectColor,
-              borderColor: `${subjectColor}33`,
-              background: `${subjectColor}15`,
-            }}
-          >
-            {series.subject}
-          </span>
+          <div className="card-badges">
+            {isQuiz && (
+              <span className="quiz-badge">SPEED QUIZ</span>
+            )}
+            <span
+              className="badge"
+              style={{
+                color: subjectColor,
+                borderColor: `${subjectColor}33`,
+                background: `${subjectColor}15`,
+              }}
+            >
+              {series.subject}
+            </span>
+          </div>
         </div>
 
         {/* Title */}
@@ -56,13 +66,15 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
             📋 {questionCount} questions
           </span>
           <span className="meta-item">
-            ⏱️ 1h 20m
+            {isQuiz ? '⏱️ 30s / question' : '⏱️ 1h 20m'}
           </span>
         </div>
 
         {/* CTA */}
         <div className="card-cta">
-          <span className="cta-text">Start Exam</span>
+          <span className="cta-text">
+            {isQuiz ? 'Start Speed Quiz' : 'Start Exam'}
+          </span>
           <span className="cta-arrow">→</span>
         </div>
       </div>
@@ -112,6 +124,23 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
 
         .card-icon {
           font-size: 1.8rem;
+        }
+
+        .card-badges {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+
+        .quiz-badge {
+          font-size: 0.68rem;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          color: #f59e0b;
+          background: rgba(245, 158, 11, 0.15);
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          padding: 0.15rem 0.45rem;
+          border-radius: var(--radius-full);
         }
 
         .card-title {

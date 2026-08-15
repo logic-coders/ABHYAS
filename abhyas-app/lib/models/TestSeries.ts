@@ -10,6 +10,9 @@ const TestSeriesSchema = new mongoose.Schema({
   createdAt: { type: String, required: true },
   isRandom: { type: Boolean },
   randomQuestions: [{ s3Key: String, number: Number }],
+  format: { type: String, default: 'test' },
+  isQuiz: { type: Boolean, default: false },
+  durationPerQuestion: { type: Number, default: 30 },
 });
 
 export const TestSeries = mongoose.models.TestSeries || mongoose.model('TestSeries', TestSeriesSchema);
