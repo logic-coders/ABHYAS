@@ -42,10 +42,10 @@ export default function AboutSection() {
 
         .about-card {
           padding: 2.5rem;
-          background: linear-gradient(135deg, rgba(17, 17, 24, 0.9), rgba(24, 20, 40, 0.8));
+          background: var(--bg-card);
           border: 1px solid var(--border-medium);
           border-radius: var(--radius-xl);
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+          box-shadow: var(--shadow-md);
         }
 
         .about-badge {
@@ -55,7 +55,7 @@ export default function AboutSection() {
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          color: var(--accent-light);
+          color: var(--accent);
           background: var(--accent-glow);
           border-radius: var(--radius-full);
           margin-bottom: 1rem;
@@ -64,14 +64,14 @@ export default function AboutSection() {
         .about-title {
           font-size: 1.75rem;
           font-weight: 800;
-          color: #ffffff;
+          color: var(--text-primary);
           margin-bottom: 1rem;
           letter-spacing: -0.02em;
         }
 
         .about-text {
           font-size: 1.05rem;
-          color: #d1d5db;
+          color: var(--text-secondary);
           line-height: 1.7;
           margin-bottom: 2rem;
           max-width: 900px;
@@ -98,7 +98,7 @@ export default function AboutSection() {
 
         .highlight-item strong {
           display: block;
-          color: #ffffff;
+          color: var(--text-primary);
           font-size: 0.95rem;
           margin-bottom: 0.15rem;
         }

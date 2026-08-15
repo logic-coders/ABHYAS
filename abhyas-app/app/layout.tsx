@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
+import { ThemeProvider } from '@/lib/theme-context';
 import Header from '@/components/Header';
-
 import Footer from '@/components/Footer';
 
 const inter = Inter({
@@ -22,21 +22,36 @@ export const metadata: Metadata = {
   },
 };
 
+const themeScript = `
+  (function() {
+    try {
+      var saved = localStorage.getItem('abhyas_theme');
+      var theme = saved === 'light' || saved === 'dark' ? saved : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
-        <AuthProvider>
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-            <Header />
-            <main style={{ flex: '1 0 auto' }}>{children}</main>
-            <Footer />
-          </div>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+              <Header />
+              <main style={{ flex: '1 0 auto' }}>{children}</main>
+              <Footer />
+            </div>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -64,17 +64,24 @@ export default function ExamTimer({ seriesId, onTimeUp }: ExamTimerProps) {
     return () => clearInterval(interval);
   }, [seriesId]);
 
-  // Format time (HH:MM:SS)
+  // Format time (HH:MM:SS or MM:SS)
   const formatTime = (ms: number) => {
-    if (ms <= 0) return '00:00:00';
+    if (ms <= 0) return '00:00';
     
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     
+    if (hours > 0) {
+      return [
+        hours.toString().padStart(2, '0'),
+        minutes.toString().padStart(2, '0'),
+        seconds.toString().padStart(2, '0')
+      ].join(':');
+    }
+    
     return [
-      hours.toString().padStart(2, '0'),
       minutes.toString().padStart(2, '0'),
       seconds.toString().padStart(2, '0')
     ].join(':');
@@ -84,45 +91,80 @@ export default function ExamTimer({ seriesId, onTimeUp }: ExamTimerProps) {
   const isWarning = timeLeft < 5 * 60 * 1000; // Less than 5 minutes
 
   return (
-    <div className={`exam-timer ${isCritical ? 'timer-critical' : isWarning ? 'timer-warning' : ''}`}>
-      <span className="timer-icon">⏱️</span>
-      <span className="timer-text">{formatTime(timeLeft)}</span>
+    <div className={`timer-card ${isCritical ? 'timer-critical' : isWarning ? 'timer-warning' : ''}`}>
+      <div className="timer-label">TIME REMAINING</div>
+      <div className="timer-display">
+        <span className="timer-digits">{formatTime(timeLeft)}</span>
+      </div>
       
       <style jsx>{`
-        .exam-timer {
+        .timer-card {
+          background: #0f172a;
+          border: 2px solid #3b82f6;
+          border-radius: var(--radius-md);
+          padding: 0.75rem 1.25rem;
+          text-align: center;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+          width: 100%;
+        }
+
+        .timer-label {
+          font-size: 0.68rem;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: #94a3b8;
+          margin-bottom: 0.2rem;
+        }
+
+        .timer-display {
           display: flex;
           align-items: center;
-          gap: 0.6rem;
-          padding: 0.6rem 1.2rem;
-          background: #1e1b4b;
-          border: 2px solid #6366f1;
-          border-radius: var(--radius-md);
-          font-variant-numeric: tabular-nums;
+          justify-content: center;
+          gap: 0.4rem;
+        }
+
+        .timer-digits {
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          font-size: 1.65rem;
           font-weight: 800;
-          font-size: 1.15rem;
-          color: #ffffff;
-          box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+          color: #38bdf8;
           letter-spacing: 0.05em;
+          line-height: 1.1;
         }
 
         .timer-warning {
-          background: #7c2d12;
+          background: #451a03;
           border-color: #f97316;
-          color: #ffedd5;
-          box-shadow: 0 4px 14px rgba(249, 115, 22, 0.4);
+          box-shadow: 0 4px 16px rgba(249, 115, 22, 0.35);
+        }
+
+        .timer-warning .timer-digits {
+          color: #fdba74;
+        }
+
+        .timer-warning .timer-label {
+          color: #fed7aa;
         }
 
         .timer-critical {
-          background: #7f1d1d;
+          background: #450a0a;
           border-color: #ef4444;
-          color: #fee2e2;
-          box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5);
-          animation: pulse 1.5s infinite;
+          box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5);
+          animation: timerPulse 1.2s infinite;
         }
 
-        @keyframes pulse {
+        .timer-critical .timer-digits {
+          color: #fca5a5;
+        }
+
+        .timer-critical .timer-label {
+          color: #fecaca;
+        }
+
+        @keyframes timerPulse {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
-          50% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+          50% { transform: scale(1.02); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
           100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
       `}</style>

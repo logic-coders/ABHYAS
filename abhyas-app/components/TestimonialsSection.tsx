@@ -82,7 +82,7 @@ export default function TestimonialsSection({ testimonials = DEFAULT_TESTIMONIAL
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          color: var(--accent-light);
+          color: var(--accent);
           background: var(--accent-glow);
           padding: 0.25rem 0.75rem;
           border-radius: var(--radius-full);
@@ -93,7 +93,7 @@ export default function TestimonialsSection({ testimonials = DEFAULT_TESTIMONIAL
         .testimonials-title {
           font-size: 1.8rem;
           font-weight: 800;
-          color: #ffffff;
+          color: var(--text-primary);
           margin-bottom: 0.5rem;
         }
 
@@ -115,15 +115,16 @@ export default function TestimonialsSection({ testimonials = DEFAULT_TESTIMONIAL
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--bg-card);
           border: 1px solid var(--border-medium);
           border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-sm);
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .testimonial-card:hover {
           transform: translateY(-3px);
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+          box-shadow: var(--shadow-md);
           border-color: var(--border-accent);
         }
 
@@ -136,7 +137,7 @@ export default function TestimonialsSection({ testimonials = DEFAULT_TESTIMONIAL
 
         .testimonial-quote {
           font-size: 0.95rem;
-          color: #d1d5db;
+          color: var(--text-secondary);
           line-height: 1.6;
           margin-bottom: 1.5rem;
           font-style: italic;
@@ -169,7 +170,7 @@ export default function TestimonialsSection({ testimonials = DEFAULT_TESTIMONIAL
 
         .author-name {
           font-size: 0.92rem;
-          color: #ffffff;
+          color: var(--text-primary);
           font-weight: 700;
         }
 

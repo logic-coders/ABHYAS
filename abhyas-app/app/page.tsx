@@ -37,7 +37,7 @@ export default function PublicLandingPage() {
                 </div>
                 <div className="pass-body">
                   <p className="pass-title" style={{ fontSize: '1.5rem', marginBottom: '0.75rem' }}>Welcome back, {user.name} 👋</p>
-                  <p className="pass-subtitle" style={{ fontStyle: 'italic', marginBottom: '1.5rem', lineHeight: '1.5' }}>"Success is the sum of small efforts, repeated day in and day out."</p>
+                  <p className="pass-subtitle" style={{ fontStyle: 'italic', marginBottom: '1.5rem', lineHeight: '1.5' }}>&ldquo;Success is the sum of small efforts, repeated day in and day out.&rdquo;</p>
                   <Link href="/tests" className="btn btn-primary btn-lg pass-btn">
                     <span>Enter Exam Arena</span>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
@@ -83,7 +83,7 @@ export default function PublicLandingPage() {
           padding: 6rem 1rem 8rem 1rem;
           text-align: center;
           overflow: hidden;
-          background: radial-gradient(circle at center, rgba(139,92,246,0.05) 0%, transparent 60%);
+          background: radial-gradient(circle at center, rgba(139,92,246,0.08) 0%, transparent 60%);
           border-radius: var(--radius-lg);
           margin-bottom: 4rem;
         }
@@ -101,13 +101,13 @@ export default function PublicLandingPage() {
           border-radius: 50%;
           filter: blur(40px);
           z-index: 1;
-          opacity: 0.4;
+          opacity: 0.35;
           animation: float 10s infinite ease-in-out alternate;
         }
         .shape-1 {
           width: 250px;
           height: 250px;
-          background: rgba(139, 92, 246, 0.4);
+          background: rgba(139, 92, 246, 0.35);
           top: -50px;
           left: -100px;
           animation-duration: 12s;
@@ -115,7 +115,7 @@ export default function PublicLandingPage() {
         .shape-2 {
           width: 300px;
           height: 300px;
-          background: rgba(14, 165, 233, 0.3);
+          background: rgba(14, 165, 233, 0.25);
           bottom: -100px;
           right: -100px;
           animation-duration: 15s;
@@ -124,7 +124,7 @@ export default function PublicLandingPage() {
         .shape-3 {
           width: 150px;
           height: 150px;
-          background: rgba(236, 72, 153, 0.3);
+          background: rgba(236, 72, 153, 0.25);
           top: 40%;
           left: 50%;
           animation-duration: 9s;
@@ -163,7 +163,7 @@ export default function PublicLandingPage() {
           left: 0;
           width: 100%;
           height: 12px;
-          background: rgba(236, 72, 153, 0.4);
+          background: rgba(236, 72, 153, 0.35);
           z-index: -1;
           transform: skewX(-15deg);
         }
@@ -197,14 +197,14 @@ export default function PublicLandingPage() {
           margin-top: 3rem;
         }
         .exam-pass-card {
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--bg-card);
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid var(--border-medium);
           border-radius: 20px;
           padding: 2rem;
           max-width: 400px;
           width: 100%;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+          box-shadow: var(--shadow-lg);
           transform-style: preserve-3d;
           transition: transform 0.4s ease, box-shadow 0.4s ease;
           animation: fadeInUp 1s ease 0.8s forwards;
@@ -212,19 +212,19 @@ export default function PublicLandingPage() {
         }
         .exam-pass-card:hover {
           transform: rotateX(5deg) rotateY(-5deg) translateY(-10px);
-          box-shadow: 0 35px 60px -15px rgba(139, 92, 246, 0.3), 0 0 0 1px rgba(255,255,255,0.1) inset;
+          box-shadow: var(--shadow-glow), var(--shadow-lg);
         }
 
         .pass-header {
           display: flex;
           justify-content: space-between;
           margin-bottom: 1.5rem;
-          border-bottom: 1px dashed rgba(255,255,255,0.2);
+          border-bottom: 1px dashed var(--border-medium);
           padding-bottom: 1rem;
         }
         .pass-badge {
-          background: rgba(139, 92, 246, 0.2);
-          color: #a78bfa;
+          background: var(--accent-glow);
+          color: var(--accent);
           padding: 0.25rem 0.75rem;
           border-radius: 999px;
           font-size: 0.75rem;
@@ -253,23 +253,23 @@ export default function PublicLandingPage() {
           align-items: center;
           justify-content: center;
           gap: 0.5rem;
-          background: linear-gradient(135deg, #8b5cf6, #ec4899);
+          background: var(--accent-gradient);
           border: none;
-          box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
+          box-shadow: 0 4px 15px var(--accent-glow);
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .pass-btn:hover {
           transform: scale(1.02);
-          box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+          box-shadow: 0 6px 20px var(--accent-glow);
         }
 
         .pass-barcode {
           font-family: monospace;
           font-size: 1.5rem;
-          color: rgba(255,255,255,0.3);
+          color: var(--text-muted);
           letter-spacing: 2px;
           text-align: center;
-          background: rgba(0,0,0,0.2);
+          background: var(--bg-glass);
           padding: 0.5rem;
           border-radius: 8px;
         }
@@ -304,7 +304,7 @@ export default function PublicLandingPage() {
           filter: blur(8px);
         }
         .glowing-wrapper.secondary::before {
-          background: linear-gradient(90deg, #3f3f46, #71717a, #3f3f46);
+          background: linear-gradient(90deg, var(--border-medium), var(--border-accent), var(--border-medium));
           opacity: 0.4;
         }
 
@@ -314,25 +314,25 @@ export default function PublicLandingPage() {
         }
 
         .pulse-btn {
-          background: #111115;
-          color: white;
           border: none;
           transition: all 0.2s ease;
           position: relative;
           z-index: 1;
         }
         .pulse-btn:hover {
-          background: rgba(17,17,21,0.8);
           transform: scale(1.05);
         }
         .float-btn {
-          background: #111115;
+          background: var(--bg-card);
+          color: var(--text-primary);
+          border: 1px solid var(--border-medium);
           transition: all 0.2s ease;
           position: relative;
           z-index: 1;
         }
         .float-btn:hover {
           transform: scale(1.05);
+          background: var(--bg-card-hover);
         }
 
         @media (max-width: 640px) {

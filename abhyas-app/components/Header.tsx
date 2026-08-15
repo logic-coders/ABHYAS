@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useTheme } from '@/lib/theme-context';
 import { useState, useRef, useEffect } from 'react';
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -43,6 +45,35 @@ export default function Header() {
 
         <nav>
           <ul className="nav-links">
+            {/* Theme Toggle Button */}
+            <li>
+              <button
+                type="button"
+                className="theme-toggle-btn"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                  </svg>
+                )}
+              </button>
+            </li>
+
             {isLoading ? (
               <li>
                 <span className="nav-link" style={{ opacity: 0.5 }}>Loading...</span>
@@ -67,6 +98,7 @@ export default function Header() {
                       className="user-badge"
                       style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                       onClick={() => setDropdownOpen(!dropdownOpen)}
+                      aria-label="User profile menu"
                     >
                       <span className="user-avatar" title={user.name}>
                         {user.name.charAt(0).toUpperCase()}
@@ -160,8 +192,8 @@ export default function Header() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 2rem;
-          height: 2rem;
+          width: 2.1rem;
+          height: 2.1rem;
           font-size: 0.85rem;
           font-weight: 700;
           color: #fff;
@@ -181,10 +213,10 @@ export default function Header() {
           right: 0;
           margin-top: 0.5rem;
           width: 250px;
-          background: #111115;
+          background: var(--dropdown-bg);
           border: 1px solid var(--border-medium);
           border-radius: var(--radius-md);
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+          box-shadow: var(--shadow-lg);
           display: flex;
           flex-direction: column;
           gap: 0.2rem;
@@ -224,7 +256,7 @@ export default function Header() {
         .dropdown-username {
           font-size: 1.05rem;
           font-weight: 700;
-          color: #fff;
+          color: var(--text-primary);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -233,7 +265,7 @@ export default function Header() {
         .dropdown-role {
           font-size: 0.78rem;
           font-weight: 600;
-          color: var(--accent-light);
+          color: var(--accent);
           letter-spacing: 0.05em;
           white-space: nowrap;
           overflow: hidden;
@@ -254,7 +286,7 @@ export default function Header() {
           padding: 0.65rem 1.25rem;
           font-size: 0.98rem;
           font-weight: 500;
-          color: #e5e7eb !important;
+          color: var(--text-primary) !important;
           text-decoration: none !important;
           background: transparent;
           border: none;
@@ -266,70 +298,47 @@ export default function Header() {
         }
 
         .dropdown-icon {
-          color: #9898a8 !important;
+          color: var(--text-muted) !important;
           flex-shrink: 0;
           transition: color 0.2s ease;
         }
 
         .dropdown-item:hover,
         .dropdown-item:hover:visited {
-          background: rgba(255, 255, 255, 0.08) !important;
-          color: #ffffff !important;
+          background: var(--dropdown-hover) !important;
+          color: var(--text-primary) !important;
         }
         
         .dropdown-item:hover .dropdown-icon {
-          color: #ffffff !important;
+          color: var(--text-primary) !important;
         }
         
         .dropdown-divider {
           height: 1px;
-          background: var(--border-medium);
+          background: var(--border-subtle);
           margin: 0.35rem 0;
         }
         
         .logout-btn,
         .logout-btn:link,
         .logout-btn:visited {
-          color: #f87171 !important;
+          color: #ef4444 !important;
         }
         .logout-btn .dropdown-icon {
-          color: #f87171 !important;
+          color: #ef4444 !important;
         }
         .logout-btn:hover,
         .logout-btn:hover:visited {
-          background: rgba(239, 68, 68, 0.15) !important;
-          color: #fca5a5 !important;
+          background: rgba(239, 68, 68, 0.12) !important;
+          color: #dc2626 !important;
         }
         .logout-btn:hover .dropdown-icon {
-          color: #fca5a5 !important;
-        }
-
-        .user-name {
-          font-size: 0.88rem;
-          font-weight: 600;
-          color: var(--text-primary);
-        }
-
-        .role-tag {
-          padding: 0.15rem 0.45rem;
-          font-size: 0.65rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--accent-light);
-          background: var(--accent-glow);
-          border-radius: var(--radius-full);
+          color: #dc2626 !important;
         }
 
         .btn-sm {
           padding: 0.4rem 0.85rem;
           font-size: 0.82rem;
-        }
-
-        @media (max-width: 640px) {
-          .user-name {
-            display: none;
-          }
         }
       `}</style>
     </header>

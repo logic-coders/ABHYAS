@@ -4,13 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Question, ExamResult } from '@/lib/types';
 import { Language } from '@/lib/pdf-parser';
+import { useTheme } from '@/lib/theme-context';
 import LanguageSelector from '@/components/LanguageSelector';
 import QuestionView from '@/components/QuestionView';
 import QuestionNavigator from '@/components/QuestionNavigator';
 import Pagination from '@/components/Pagination';
-import ResultModal from '@/components/ResultModal';
 import DisclaimerModal from '@/components/DisclaimerModal';
-import ExamTimer from '@/components/ExamTimer';
 
 interface ExamData {
   seriesId: string;
@@ -24,6 +23,7 @@ export default function ExamPage() {
   const router = useRouter();
   const params = useParams();
   const seriesId = params.seriesId as string;
+  const { theme, toggleTheme } = useTheme();
 
   // Language selection
   const [language, setLanguage] = useState<Language | null>(null);
@@ -41,9 +41,6 @@ export default function ExamPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Result modal
-  const [examResult, setExamResult] = useState<ExamResult | null>(null);
 
   // Track previous index to mark as visited when navigating away
   const [prevIndex, setPrevIndex] = useState<number | null>(null);
@@ -122,6 +119,7 @@ export default function ExamPage() {
     }
   }, [examData, currentIndex, isTimeUp, isSubmitting]);
 
+  // Finish and view Scoreboard
   const handleSubmit = useCallback(async () => {
     if (!examData || isSubmitting) return;
     setIsSubmitting(true);
@@ -156,35 +154,32 @@ export default function ExamPage() {
         document.exitFullscreen().catch(() => {});
       }
 
-      // Store result in sessionStorage for the detailed result page
+      // Store result in sessionStorage for the detailed result / scoreboard page
       sessionStorage.setItem(`result-${seriesId}`, JSON.stringify(result));
 
-      // Show result modal instead of redirecting
-      setExamResult(result);
+      // Redirect directly to the Scoreboard page
+      router.push(`/result/${seriesId}`);
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Submission failed');
-    } finally {
       setIsSubmitting(false);
     }
-  }, [examData, isSubmitting, answers, seriesId, language]);
+  }, [examData, isSubmitting, answers, seriesId, language, router]);
 
   const handleTimeUp = useCallback(() => {
     setIsTimeUp(true);
-    if (!examResult) {
-      handleSubmit();
-    }
-  }, [examResult, handleSubmit]);
+    handleSubmit();
+  }, [handleSubmit]);
 
   // Fullscreen lock & back navigation prevention mid-test
   useEffect(() => {
-    if (!hasAcceptedDisclaimer || examResult) return;
+    if (!hasAcceptedDisclaimer) return;
 
     // 1. Prevent back navigation
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
       window.history.pushState(null, '', window.location.href);
-      alert('Back navigation is disabled during the exam. Please complete and submit your exam using the Submit button.');
+      alert('Back navigation is disabled during the exam. Please complete your exam using the Finish & View Scoreboard button.');
     };
     window.addEventListener('popstate', handlePopState);
 
@@ -200,10 +195,10 @@ export default function ExamPage() {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasAcceptedDisclaimer, examResult]);
+  }, [hasAcceptedDisclaimer]);
 
   const handleAcceptDisclaimer = () => {
-    // Clear any stale timer from a previous attempt before starting a fresh attempt
+    // Clear any stale timer from a previous attempt before starting fresh
     sessionStorage.removeItem(`exam_end_time_${seriesId}`);
     setHasAcceptedDisclaimer(true);
     // Request fullscreen on accepting disclaimer
@@ -242,7 +237,7 @@ export default function ExamPage() {
         <div className="empty-state">
           <div className="empty-state-icon">😕</div>
           <p className="empty-state-text">{error || 'Exam not found'}</p>
-          <button className="btn btn-primary" onClick={() => router.push('/')}>
+          <button className="btn btn-primary" onClick={() => router.push('/tests')}>
             ← Back to Tests
           </button>
         </div>
@@ -255,137 +250,240 @@ export default function ExamPage() {
     return (
       <DisclaimerModal
         onAccept={handleAcceptDisclaimer}
-        onCancel={() => router.push('/')}
+        onCancel={() => router.push('/tests')}
       />
     );
   }
 
   const currentQuestion = examData.questions[currentIndex];
-  const answeredCount = Object.keys(answers).length;
 
   return (
-    <>
-      <div className="container page-wrapper">
-        <div className="exam-layout">
-          {/* Main content area */}
-          <div className="exam-main">
-            {/* Exam Header */}
-            <div className="exam-header">
-              <div className="exam-title-area">
-                <h1 className="exam-title">{examData.seriesTitle}</h1>
-                <span className="badge">{examData.subject}</span>
-                <span className="lang-badge">
-                  {language === 'en' ? 'English' : 'Hindi'}
-                </span>
-              </div>
-              <div style={{ marginLeft: 'auto' }}>
-                <ExamTimer seriesId={seriesId} onTimeUp={handleTimeUp} />
-              </div>
+    <div className="exam-container">
+      {/* Top Header Bar */}
+      <header className="exam-top-nav">
+        <div className="exam-top-nav-inner">
+          <div className="exam-branding">
+            <span className="exam-subject-badge">{examData.subject.toUpperCase()}</span>
+            <div className="exam-header-titles">
+              <h1 className="exam-header-main-title">{examData.seriesTitle}</h1>
+              <span className="exam-header-subtitle">
+                {examData.totalQuestions} Questions • Standard Marking (+1.00, -0.25)
+              </span>
             </div>
+          </div>
 
-            {/* Question */}
+          <div className="exam-nav-actions">
+            <span className="cbt-mode-badge">
+              <span className="cbt-dot" /> CBT Exam Mode
+            </span>
+            <span className="lang-pill">
+              {language === 'en' ? 'English' : 'Hindi'}
+            </span>
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="container" style={{ paddingTop: '1.5rem', paddingBottom: '3rem' }}>
+        <div className="exam-layout">
+          {/* Main Question & Actions Area */}
+          <main className="exam-main-panel">
             <QuestionView
               question={currentQuestion}
               displayNumber={currentIndex + 1}
+              totalQuestions={examData.totalQuestions}
+              subjectName={examData.subject}
               selectedOption={answers[currentQuestion.number] || ''}
               onSelect={handleSelect}
             />
 
-            {/* Pagination */}
             <Pagination
               current={currentIndex}
               total={examData.questions.length}
               onPrevious={() => setCurrentIndex((i) => Math.max(0, i - 1))}
               onNext={() => setCurrentIndex((i) => Math.min(examData.questions.length - 1, i + 1))}
-              onSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
-              answeredCount={answeredCount}
               onClearResponse={handleClearResponse}
               onMarkForReview={handleMarkForReview}
             />
-          </div>
+          </main>
 
-          {/* Question Navigator Panel */}
-          <QuestionNavigator
-            questions={examData.questions}
-            currentIndex={currentIndex}
-            answers={answers}
-            visitedQuestions={visitedQuestions}
-            markedForReview={markedForReview}
-            onNavigate={handleNavigate}
-          />
+          {/* Right-Side Question Navigator & Timer Panel */}
+          <div className="exam-side-panel">
+            <QuestionNavigator
+              seriesId={seriesId}
+              questions={examData.questions}
+              currentIndex={currentIndex}
+              answers={answers}
+              visitedQuestions={visitedQuestions}
+              markedForReview={markedForReview}
+              onNavigate={handleNavigate}
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              onTimeUp={handleTimeUp}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Result Modal */}
-      {examResult && (
-        <ResultModal
-          result={examResult}
-          onClose={() => router.push('/')}
-        />
-      )}
-
       <style jsx>{`
-        .exam-layout {
-          display: grid;
-          grid-template-columns: 1fr 220px;
-          gap: 2rem;
-          align-items: start;
+        .exam-container {
+          min-height: 100vh;
+          background: var(--bg-primary);
         }
 
-        .exam-main {
-          min-width: 0;
+        /* ── Top Header Bar ── */
+        .exam-top-nav {
+          background: var(--header-bg);
+          border-bottom: 1px solid var(--border-medium);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          padding: 0.75rem 0;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          box-shadow: var(--shadow-sm);
         }
 
-        .exam-header {
-          display: flex;
-          align-items: flex-start;
-          gap: 1rem;
-          margin-bottom: 2.5rem;
-        }
-
-        .exam-title-area {
+        .exam-top-nav-inner {
+          width: 100%;
+          max-width: var(--max-width);
+          margin: 0 auto;
+          padding: 0 var(--space-lg);
           display: flex;
           align-items: center;
-          gap: 0.75rem;
-          flex-wrap: wrap;
+          justify-content: space-between;
+          gap: 1rem;
         }
 
-        .exam-title {
-          font-size: 1.3rem;
-          font-weight: 700;
-          letter-spacing: -0.02em;
+        .exam-branding {
+          display: flex;
+          align-items: center;
+          gap: 0.85rem;
         }
 
-        .lang-badge {
-          padding: 0.2rem 0.5rem;
-          font-size: 0.72rem;
-          font-weight: 700;
-          background: var(--bg-glass-strong);
-          border: 1px solid var(--border-subtle);
-          border-radius: var(--radius-full);
+        .exam-subject-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.35rem 0.75rem;
+          background: #2563eb;
+          color: #ffffff;
+          font-weight: 800;
+          font-size: 0.82rem;
+          border-radius: var(--radius-sm);
+          letter-spacing: 0.04em;
+        }
+
+        .exam-header-titles {
+          display: flex;
+          flex-direction: column;
+          line-height: 1.25;
+        }
+
+        .exam-header-main-title {
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: var(--text-primary);
+          letter-spacing: -0.01em;
+        }
+
+        .exam-header-subtitle {
+          font-size: 0.78rem;
           color: var(--text-secondary);
         }
 
-        @media (max-width: 768px) {
+        .exam-nav-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .cbt-mode-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.35rem 0.75rem;
+          background: var(--bg-glass-strong);
+          border: 1px solid var(--border-medium);
+          border-radius: var(--radius-full);
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+
+        .cbt-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #22c55e;
+          box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+        }
+
+        .lang-pill {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.35rem 0.65rem;
+          background: var(--bg-glass-strong);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-full);
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: var(--text-secondary);
+        }
+
+        /* ── Main Layout ── */
+        .exam-layout {
+          display: grid;
+          grid-template-columns: 1fr 310px;
+          gap: 1.75rem;
+          align-items: start;
+        }
+
+        .exam-main-panel {
+          min-width: 0;
+        }
+
+        .exam-side-panel {
+          min-width: 0;
+        }
+
+        @media (max-width: 900px) {
           .exam-layout {
             grid-template-columns: 1fr;
           }
-          
-          .exam-header {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            background: rgba(10, 10, 15, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 1rem 0;
-            margin-top: -1rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border-subtle);
+
+          .exam-header-subtitle {
+            display: none;
+          }
+
+          .cbt-mode-badge {
+            display: none;
           }
         }
       `}</style>
-    </>
+    </div>
   );
 }

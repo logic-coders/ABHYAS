@@ -54,7 +54,7 @@ export default function ResultPage() {
       <div className="result-container">
         {/* Header */}
         <div className="result-header">
-          <button className="btn btn-ghost" onClick={() => router.push('/')}>
+          <button className="btn btn-ghost" onClick={() => router.push('/tests')}>
             ← Back to Tests
           </button>
         </div>
@@ -131,7 +131,7 @@ export default function ResultPage() {
 
         {/* Actions */}
         <div className="result-actions">
-          <button className="btn btn-primary btn-lg" onClick={() => router.push('/')}>
+          <button className="btn btn-primary btn-lg" onClick={() => router.push('/tests')}>
             📖 Take Another Test
           </button>
           <button

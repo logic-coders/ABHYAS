@@ -5,9 +5,6 @@ interface PaginationProps {
   total: number;
   onPrevious: () => void;
   onNext: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  answeredCount: number;
   onClearResponse: () => void;
   onMarkForReview: () => void;
 }
@@ -17,9 +14,6 @@ export default function Pagination({
   total,
   onPrevious,
   onNext,
-  onSubmit,
-  isSubmitting,
-  answeredCount,
   onClearResponse,
   onMarkForReview,
 }: PaginationProps) {
@@ -27,157 +21,153 @@ export default function Pagination({
   const isLast = current === total - 1;
 
   return (
-    <div className="pagination-wrapper">
-      {/* Progress bar */}
-      <div className="progress-bar">
-        <div
-          className="progress-fill"
-          style={{ width: `${((current + 1) / total) * 100}%` }}
-        />
-      </div>
-
-      {/* Info */}
-      <div className="pagination-info">
-        <span className="page-indicator">
-          Question <strong>{current + 1}</strong> of <strong>{total}</strong>
-        </span>
-        <span className="answered-indicator">
-          {answeredCount} / {total} answered
-        </span>
-      </div>
-
-      {/* Navigation */}
-      <div className="pagination-nav">
+    <div className="exam-bottom-bar">
+      {/* Left side actions */}
+      <div className="bottom-bar-left">
         <button
-          className="btn btn-secondary"
+          className="btn btn-review"
+          onClick={onMarkForReview}
+          type="button"
+        >
+          {isLast ? 'Mark for Review' : 'Mark for Review & Next'}
+        </button>
+        <button
+          className="btn btn-clear"
+          onClick={onClearResponse}
+          type="button"
+        >
+          Clear Response
+        </button>
+      </div>
+
+      {/* Right side navigation */}
+      <div className="bottom-bar-right">
+        <button
+          className="btn btn-prev"
           onClick={onPrevious}
           disabled={isFirst}
+          type="button"
         >
           ← Previous
         </button>
 
-        <div className="action-buttons">
-          <button className="btn btn-ghost clear-btn" onClick={onClearResponse}>
-            Clear Response
+        {!isLast && (
+          <button
+            className="btn btn-next"
+            onClick={onNext}
+            type="button"
+          >
+            Save & Next →
           </button>
-          
-          {isLast ? (
-            <>
-              <button className="btn btn-secondary review-btn" onClick={onMarkForReview}>
-                Mark for Review
-              </button>
-              <button
-                className="btn btn-primary btn-lg"
-                onClick={onSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="spinner" /> Scoring...
-                  </>
-                ) : (
-                  '✓ Submit Exam'
-                )}
-              </button>
-            </>
-          ) : (
-            <>
-              <button className="btn btn-secondary review-btn" onClick={onMarkForReview}>
-                Mark for Review & Next
-              </button>
-              <button className="btn btn-primary" onClick={onNext}>
-                Save & Next →
-              </button>
-            </>
-          )}
-        </div>
+        )}
       </div>
 
       <style jsx>{`
-        .pagination-wrapper {
-          margin-top: 2.5rem;
-          padding-top: 1.5rem;
-          border-top: 1px solid var(--border-subtle);
-        }
-
-        .progress-bar {
-          width: 100%;
-          height: 4px;
-          background: var(--bg-glass-strong);
-          border-radius: var(--radius-full);
-          overflow: hidden;
-          margin-bottom: 1rem;
-        }
-
-        .progress-fill {
-          height: 100%;
-          background: var(--accent-gradient);
-          border-radius: var(--radius-full);
-          transition: width 0.4s ease;
-        }
-
-        .pagination-info {
+        .exam-bottom-bar {
+          margin-top: 1.5rem;
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          margin-bottom: 1.25rem;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 1rem;
+          padding: 1rem 0;
+        }
+
+        .bottom-bar-left {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          flex-wrap: wrap;
+        }
+
+        .bottom-bar-right {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          flex-wrap: wrap;
+          margin-left: auto;
+        }
+
+        .btn-review {
+          background: #7c3aed;
+          color: #ffffff !important;
+          border: none;
+          font-weight: 600;
           font-size: 0.88rem;
+          padding: 0.65rem 1.15rem;
+          border-radius: var(--radius-md);
+          box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+        }
+
+        .btn-review:hover {
+          background: #6d28d9;
+          transform: translateY(-1px);
+        }
+
+        .btn-clear {
+          background: var(--bg-glass-strong);
           color: var(--text-secondary);
+          border: 1px solid var(--border-medium);
+          font-weight: 600;
+          font-size: 0.88rem;
+          padding: 0.65rem 1.15rem;
+          border-radius: var(--radius-md);
         }
 
-        .page-indicator strong {
-          color: var(--text-primary);
-        }
-
-        .answered-indicator {
-          color: var(--text-muted);
-        }
-
-        .pagination-nav {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 1rem;
-        }
-
-        .action-buttons {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-        }
-
-        .clear-btn {
-          color: var(--text-muted);
-        }
-
-        .clear-btn:hover {
+        .btn-clear:hover {
           color: var(--color-incorrect);
+          border-color: rgba(239, 68, 68, 0.4);
+          background: rgba(239, 68, 68, 0.08);
         }
 
-        .review-btn {
-          background: rgba(168, 85, 247, 0.1);
-          color: #a855f7;
-          border-color: rgba(168, 85, 247, 0.3);
+        .btn-prev {
+          background: var(--bg-glass-strong);
+          color: var(--text-primary);
+          border: 1px solid var(--border-medium);
+          font-weight: 600;
+          font-size: 0.88rem;
+          padding: 0.65rem 1.25rem;
+          border-radius: var(--radius-md);
         }
 
-        .review-btn:hover {
-          background: rgba(168, 85, 247, 0.2);
-          border-color: #a855f7;
+        .btn-prev:hover:not(:disabled) {
+          border-color: var(--border-accent);
+          background: var(--bg-card-hover);
+        }
+
+        .btn-next {
+          background: #2563eb;
+          color: #ffffff !important;
+          border: none;
+          font-weight: 600;
+          font-size: 0.88rem;
+          padding: 0.65rem 1.35rem;
+          border-radius: var(--radius-md);
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-next:hover {
+          background: #1d4ed8;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
         }
 
         @media (max-width: 768px) {
-          .pagination-nav {
+          .exam-bottom-bar {
             flex-direction: column;
+            align-items: stretch;
           }
 
-          .action-buttons {
-            flex-direction: column;
+          .bottom-bar-left,
+          .bottom-bar-right {
             width: 100%;
+            justify-content: space-between;
           }
 
-          .pagination-nav .btn,
-          .action-buttons .btn {
-            width: 100%;
+          .bottom-bar-left .btn,
+          .bottom-bar-right .btn {
+            flex: 1;
+            text-align: center;
           }
         }
       `}</style>

@@ -40,7 +40,7 @@ export default function LandingPage() {
     <div className="container">
       {/* Dashboard Header */}
       <section className="dashboard-header" style={{ marginTop: '3rem', marginBottom: '2rem', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
           Available Practice Tests
         </h1>
         <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>

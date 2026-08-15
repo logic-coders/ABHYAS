@@ -218,6 +218,22 @@ Admin creates a **Test Series** by filling in:
 - On the Profile Dashboard, clicking on a specific past test from the user's test history opens a detailed result view for that attempt.
 - This detailed view matches the same post-submission result page shown right after submitting a test — showing the full question-by-question breakdown of correct vs. incorrect answers, not just the summary score.
 
+## Phase IX
+
+### 27. Dark Mode / Light Mode Toggle
+- Global on/off theme toggle allowing users to switch between Dark Mode and Light Mode across the app.
+- Toggle accessible in the global header and inside the exam header.
+- Theme preference persists across sessions in `localStorage`.
+- Comprehensive design tokens and styling across Landing Page, Tests Page, Exam Page, Profile Page, Admin Page, Login/Register, and Modals.
+
+### 28. Confirm Exam Page Layout — Question Navigator, Submit, and Timer
+- The question number navigator (right-side panel), Submit Exam button, and Timer follow the reference layout:
+  - Circular/rounded numbered navigator with 5 states: Green (Answered), Red (Not Answered), Gray (Not Visited), Purple (Marked for Review), and Purple with Green indicator (Ans & Marked for Review).
+  - Prominent digital timer displaying `TIME REMAINING` at the top of the right panel.
+  - Action bar with `Mark for Review & Next`, `Clear Response`, `← Previous`, `Save & Next →`, and prominent `Submit Test`.
+  - Question Palette panel footer with `Finish & View Scorecard`.
+- **Submission Behavior**: The user can submit at any time regardless of how many questions have been answered (0 to N questions). Submission is never blocked by incomplete answers.
+
 ## Tech Stack
 Next.js, React, CSS Modules
 
