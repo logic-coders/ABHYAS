@@ -26,8 +26,8 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Hide global header on exam pages for distraction-free exam mode
-  if (pathname?.startsWith('/exam')) {
+  // Hide global header on exam/quiz taking pages for distraction-free mode
+  if (pathname?.startsWith('/exam') || (pathname?.startsWith('/quiz/') && pathname !== '/quiz')) {
     return null;
   }
 

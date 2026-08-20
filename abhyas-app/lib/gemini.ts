@@ -67,57 +67,129 @@ export async function translateQuestionsToHindi(
   if (questions.length === 0) return questions;
 
   try {
-    // We use a delimiter that translation models usually preserve
-    const DELIMITER = ' ||| ';
-    const textsToTranslate: string[] = [];
+    const CHUNK_SIZE = 20;
+    const translatedQuestions: ManualQuestion[] = [];
 
-    questions.forEach(q => {
-      textsToTranslate.push(q.text);
-      q.options.forEach(opt => {
-        const cleanOpt = opt.replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '').trim();
-        textsToTranslate.push(cleanOpt);
-      });
-    });
+    // Create an array of chunked promises for parallel processing
+    const promises = [];
+    for (let i = 0; i < questions.length; i += CHUNK_SIZE) {
+      const chunk = questions.slice(i, i + CHUNK_SIZE);
+      
+      const prompt = `You are an expert academic translator specializing in Indian competitive exams.
+Translate the following multiple-choice questions from English to Hindi.
 
-    // Chunking to avoid URL length limits
-    const CHUNK_SIZE = 25;
-    const translatedTexts: string[] = [];
+Rules:
+1. Ensure mathematical, scientific, and technical terms are accurately translated into formal academic Hindi.
+2. Preserve all mathematical formulas, equations, numbers, and Latin/Greek symbols exactly as they are.
+3. Translate ONLY the 'text' string and the strings inside the 'options' array.
+4. Do NOT translate the 'correctAnswer' or 'number' fields.
+5. Return EXACTLY the same JSON structure as provided.
+6. Provide ONLY the final JSON array in your response, with no markdown, no code blocks, and no extra text.
 
-    for (let i = 0; i < textsToTranslate.length; i += CHUNK_SIZE) {
-      const chunk = textsToTranslate.slice(i, i + CHUNK_SIZE);
-      const combined = chunk.join(DELIMITER);
-      
-      const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=hi&dt=t&q=${encodeURIComponent(combined)}`);
-      
-      if (!res.ok) {
-        throw new Error(`Translation API error: ${res.status}`);
-      }
-      
-      const data = await res.json();
-      // Google Translate returns an array of chunks if the text is long
-      const translatedCombined = data[0].map((item: any) => item[0]).join('');
-      
-      // Split back by delimiter (Google might add spaces around it)
-      const splits = translatedCombined.split(/\s*\|\|\|\s*/);
-      translatedTexts.push(...splits);
+Here is the JSON array of questions to translate:
+${JSON.stringify(chunk, null, 2)}`;
+
+      promises.push(
+        callGemini(prompt).then((rawResponse) => {
+          let jsonStr = rawResponse;
+          const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            jsonStr = jsonMatch[0];
+          }
+          return JSON.parse(jsonStr) as ManualQuestion[];
+        })
+      );
     }
 
-    // Reconstruct the objects
-    let pointer = 0;
-    return questions.map(q => {
-      const text = translatedTexts[pointer++] || q.text;
-      const options = q.options.map((opt) => translatedTexts[pointer++] || opt);
-      
-      return {
-        number: q.number,
-        text,
-        options,
-        correctAnswer: q.correctAnswer,
-      };
-    });
+    // Wait for all chunks to finish translating
+    const chunkResults = await Promise.all(promises);
+
+    // Flatten results
+    for (const resChunk of chunkResults) {
+      translatedQuestions.push(...resChunk);
+    }
+
+    // Ensure all questions translated properly, and clean up options
+    if (translatedQuestions.length !== questions.length) {
+      console.warn(`Translation length mismatch: expected ${questions.length}, got ${translatedQuestions.length}`);
+    }
+
+    return translatedQuestions.map(q => ({
+      number: q.number,
+      text: q.text,
+      options: q.options.map(opt => opt.replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '').trim()),
+      correctAnswer: q.correctAnswer,
+    }));
   } catch (error) {
-    console.error('Failed to translate questions to Hindi:', error);
-    return questions; // Graceful fallback
+    console.error('Failed to translate questions to Hindi via LLM:', error);
+    return questions; // Graceful fallback to English if translation fails
+  }
+}
+
+/**
+ * Clean up garbled Hindi text extracted from PDFs (Kruti Dev/DevLys artifacts) using Gemini AI.
+ * This runs on PDF test extractions when language is Hindi.
+ */
+export async function cleanGarbledHindiQuestions(
+  questions: Question[]
+): Promise<Question[]> {
+  if (questions.length === 0) return questions;
+
+  try {
+    const CHUNK_SIZE = 20;
+    const cleanedQuestions: Question[] = [];
+    const promises = [];
+
+    for (let i = 0; i < questions.length; i += CHUNK_SIZE) {
+      const chunk = questions.slice(i, i + CHUNK_SIZE);
+      
+      const prompt = `You are an expert Hindi proofreader and editor.
+The following JSON array contains multiple-choice questions in Hindi extracted from a PDF.
+Due to legacy font encodings (like Kruti Dev) and PDF extraction issues, the text contains garbled characters and artifacts such as 'ê', 'f', 'Û०रा', 'क्‌म', 'र,ु', 'मा°', etc.
+
+Rules:
+1. Fix all garbled characters, typos, and font artifacts to form correct academic Hindi words (e.g. 'Û०रा' -> 'द्वारा', 'êप' -> 'रूप', 'fूल' -> 'फूल', 'कृ्‌या' -> 'क्रिया', 'र,ु' -> 'वृंद').
+2. Do NOT translate the questions. They are already in Hindi. Just correct the spelling/artifacts.
+3. Preserve all mathematical formulas, numbers, equations, and Latin/Greek symbols exactly as they are.
+4. Correct ONLY the 'text' string and the strings inside the 'options' array.
+5. Do NOT modify the 'number' field.
+6. Return EXACTLY the same JSON structure as provided.
+7. Provide ONLY the final JSON array in your response, with no markdown, no code blocks, and no extra text.
+
+Here is the JSON array of questions to clean:
+${JSON.stringify(chunk, null, 2)}`;
+
+      promises.push(
+        callGemini(prompt).then((rawResponse) => {
+          let jsonStr = rawResponse;
+          const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            jsonStr = jsonMatch[0];
+          }
+          return JSON.parse(jsonStr) as Question[];
+        })
+      );
+    }
+
+    const chunkResults = await Promise.all(promises);
+
+    for (const resChunk of chunkResults) {
+      cleanedQuestions.push(...resChunk);
+    }
+
+    if (cleanedQuestions.length !== questions.length) {
+      console.warn(`Cleaning length mismatch: expected ${questions.length}, got ${cleanedQuestions.length}`);
+    }
+
+    // Return cleaned results, stripping out ABC prefixes from options just in case
+    return cleanedQuestions.map(q => ({
+      number: q.number,
+      text: q.text,
+      options: (q.options || []).map(opt => opt.replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '').trim()),
+    }));
+  } catch (error) {
+    console.error('Failed to clean Hindi questions via LLM:', error);
+    return questions; // Graceful fallback to regex-only cleaned questions
   }
 }
 

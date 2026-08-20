@@ -756,6 +756,15 @@ export default function QuizPage() {
         }
 
         @media (max-width: 640px) {
+          .quiz-top-inner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+          }
+          .quiz-nav-actions {
+            width: 100%;
+            justify-content: flex-end;
+          }
           .quiz-card {
             padding: 1.5rem;
           }
@@ -764,6 +773,14 @@ export default function QuizPage() {
           }
           .quiz-option-btn {
             padding: 0.85rem 1rem;
+          }
+          .quiz-bottom-actions {
+            flex-direction: column-reverse;
+            gap: 1rem;
+          }
+          .btn-skip, .btn-next-q {
+            width: 100%;
+            text-align: center;
           }
         }
       `}</style>

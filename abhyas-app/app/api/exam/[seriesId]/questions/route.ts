@@ -5,7 +5,7 @@ import { getTestSeriesById } from '@/lib/metadata-store';
 import { downloadPDF } from '@/lib/s3';
 import { extractText, parseQuestions, Language } from '@/lib/pdf-parser';
 import { Question, ManualQuestion } from '@/lib/types';
-import { translateQuestionsToHindi } from '@/lib/gemini';
+import { translateQuestionsToHindi, cleanGarbledHindiQuestions } from '@/lib/gemini';
 
 /**
  * GET /api/exam/[seriesId]/questions?lang=en|hi
@@ -93,6 +93,15 @@ export async function GET(
         },
         { status: 422 }
       );
+    }
+
+    // Apply Gemini LLM cleanup for Hindi PDF/Random tests to perfectly fix OCR font artifacts
+    if (lang === 'hi' && !series.isManual) {
+      try {
+        questions = await cleanGarbledHindiQuestions(questions);
+      } catch (err) {
+        console.warn('Failed to clean garbled hindi text via LLM, proceeding with regex-cleaned questions:', err);
+      }
     }
 
     return NextResponse.json({

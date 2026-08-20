@@ -8,8 +8,8 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  // Do not show on exam pages
-  if (pathname?.startsWith('/exam')) {
+  // Do not show on exam/quiz taking pages
+  if (pathname?.startsWith('/exam') || (pathname?.startsWith('/quiz/') && pathname !== '/quiz')) {
     return null;
   }
 
