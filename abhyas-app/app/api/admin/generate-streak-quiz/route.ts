@@ -7,6 +7,8 @@ import { generateStreakQuestions } from '@/lib/gemini';
 import connectToDatabase from '@/lib/mongoose';
 import { TestSeries } from '@/lib/models/TestSeries';
 
+import { getTodayDateIST } from '@/lib/date-utils';
+
 /**
  * POST /api/admin/generate-streak-quiz
  * Auto-generates today's 20-question rotating Daily Streak Quiz.
@@ -23,7 +25,7 @@ export async function POST(request: Request) {
     const forceSubject = url.searchParams.get('subject') as Subject | null;
 
     // Calculate today's rotating subject based on date
-    const todayDate = new Date().toISOString().split('T')[0];
+    const todayDate = getTodayDateIST();
     const dayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % SUBJECTS.length;
     const rotatingSubject: Subject = forceSubject && SUBJECTS.includes(forceSubject)
       ? forceSubject
@@ -38,14 +40,9 @@ export async function POST(request: Request) {
     });
 
     if (existing) {
-      // Fix 26: Preserve existing streak quizzes — return the one already generated for today
-      return NextResponse.json({
-        success: true,
-        quiz: existing,
-        rotatingSubject: existing.subject,
-        streakDate: todayDate,
-        alreadyExisted: true,
-      }, { status: 200 });
+      // Admin is forcefully generating a new streak quiz, so delete the existing one for today
+      await TestSeries.deleteOne({ _id: existing._id });
+      console.log(`🗑️ Admin override: Deleted existing streak quiz for ${todayDate}`);
     }
 
     // Try AI-powered generation first, fall back to curated pool

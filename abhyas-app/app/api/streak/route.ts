@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getTodayDateIST } from '@/lib/date-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { getUser } from '@/lib/auth';
 import { getUserById } from '@/lib/user-store';
@@ -23,7 +24,7 @@ export async function GET() {
     }
 
     const fullUser = await getUserById(authUser.id);
-    const todayDate = new Date().toISOString().split('T')[0];
+    const todayDate = getTodayDateIST();
     const dayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % SUBJECTS.length;
     const todaySubject = SUBJECTS[dayIndex];
 

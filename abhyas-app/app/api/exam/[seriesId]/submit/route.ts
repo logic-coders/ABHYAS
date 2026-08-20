@@ -180,8 +180,9 @@ export async function POST(
       // If this was a daily streak quiz, update user's streak
       if (series.isDailyStreak) {
         const { getUserById, updateUser } = await import('@/lib/user-store');
-        const todayStr = new Date().toISOString().split('T')[0];
-        const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const { getTodayDateIST, getYesterdayDateIST } = require('@/lib/date-utils');
+        const todayStr = getTodayDateIST();
+        const yesterdayStr = getYesterdayDateIST();
 
         const fullUser = await getUserById(user.id);
         if (fullUser) {
