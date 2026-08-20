@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   },
 };
 
+import MobileBottomNav from '@/components/MobileBottomNav';
+
 const themeScript = `
   (function() {
     try {
@@ -49,6 +51,7 @@ export default function RootLayout({
               <Header />
               <main style={{ flex: '1 0 auto' }}>{children}</main>
               <Footer />
+              <MobileBottomNav />
             </div>
           </AuthProvider>
         </ThemeProvider>

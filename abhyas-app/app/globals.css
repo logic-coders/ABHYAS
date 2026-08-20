@@ -696,3 +696,14 @@ a:hover {
     width: 100%;
   }
 }
+
+
+@media (max-width: 767px) {
+  .desktop-only {
+    display: none !important;
+  }
+  
+  body {
+    padding-bottom: 90px; /* Space for Mobile Bottom Nav */
+  }
+}

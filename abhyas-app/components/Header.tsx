@@ -80,18 +80,18 @@ export default function Header() {
               </li>
             ) : user ? (
               <>
-                <li>
+                <li className="desktop-only">
                   <Link href="/tests" className={`nav-link ${pathname === '/tests' ? 'active' : ''}`}>
                     Tests
                   </Link>
                 </li>
-                <li>
+                <li className="desktop-only">
                   <Link href="/quiz" className={`nav-link ${pathname?.startsWith('/quiz') ? 'active' : ''}`}>
                     Quiz
                   </Link>
                 </li>
                 {user.role === 'admin' && (
-                  <li>
+                  <li className="desktop-only">
                     <Link href="/admin" className={`nav-link ${pathname?.startsWith('/admin') ? 'active' : ''}`}>
                       Admin
                     </Link>
@@ -163,12 +163,12 @@ export default function Header() {
               </>
             ) : (
               <>
-                <li>
+                <li className="desktop-only">
                   <Link href="/login" className="nav-link">
                     Login
                   </Link>
                 </li>
-                <li>
+                <li className="desktop-only">
                   <Link href="/register" className="btn btn-primary btn-sm">
                     Register
                   </Link>
