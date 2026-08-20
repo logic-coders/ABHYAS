@@ -14,11 +14,6 @@ export default async function ProfilePage() {
   }
 
   const user = await getUserById(authUser.id);
-  const currentStreak = user?.currentStreak || 0;
-  const longestStreak = user?.longestStreak || 0;
-  const lastStreakDate = user?.lastStreakDate || null;
-  const todayStr = new Date().toISOString().split('T')[0];
-  const isCompletedToday = lastStreakDate === todayStr;
 
   return (
     <ProfileView
@@ -28,12 +23,6 @@ export default async function ProfilePage() {
         email: authUser.email,
         role: authUser.role,
         createdAt: user?.createdAt,
-      }}
-      streak={{
-        currentStreak,
-        longestStreak,
-        lastStreakDate,
-        isCompletedToday,
       }}
     />
   );

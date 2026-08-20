@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAllTestSeries, addTestSeries } from '@/lib/metadata-store';
 import { TestSeries, Subject } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,10 +7,19 @@ import { getUser } from '@/lib/auth';
 /**
  * GET /api/test-series
  * Returns all test series metadata.
+ * Supports ?streakOnly=true to return only daily streak quizzes.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const series = await getAllTestSeries();
+    const { searchParams } = new URL(request.url);
+    const streakOnly = searchParams.get('streakOnly') === 'true';
+
+    let series = await getAllTestSeries();
+    
+    if (streakOnly) {
+      series = series.filter(s => s.isDailyStreak);
+    }
+    
     return NextResponse.json(series);
   } catch (error: any) {
     console.error('Failed to fetch test series:', error);

@@ -3,12 +3,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { getUser } from '@/lib/auth';
 import { SUBJECTS, Subject } from '@/lib/types';
 import { CURATED_STREAK_QUESTIONS } from '@/lib/streak-pool';
+import { generateStreakQuestions } from '@/lib/gemini';
 import connectToDatabase from '@/lib/mongoose';
 import { TestSeries } from '@/lib/models/TestSeries';
 
 /**
  * POST /api/admin/generate-streak-quiz
  * Auto-generates today's 20-question rotating Daily Streak Quiz.
+ * Tries AI generation first (Gemini), falls back to curated pool.
  */
 export async function POST(request: Request) {
   try {
@@ -36,21 +38,36 @@ export async function POST(request: Request) {
     });
 
     if (existing) {
-      // Remove existing to refresh today's streak quiz cleanly
-      await TestSeries.deleteOne({ id: existing.id });
+      // Fix 26: Preserve existing streak quizzes — return the one already generated for today
+      return NextResponse.json({
+        success: true,
+        quiz: existing,
+        rotatingSubject: existing.subject,
+        streakDate: todayDate,
+        alreadyExisted: true,
+      }, { status: 200 });
     }
 
-    // Pick 20 questions for the subject
-    const curatedList = CURATED_STREAK_QUESTIONS[rotatingSubject] || CURATED_STREAK_QUESTIONS.Music;
-    
-    // Shuffle and pick 20 questions
-    const shuffled = [...curatedList].sort(() => 0.5 - Math.random());
-    const selectedQuestions = shuffled.slice(0, 20).map((q, idx) => ({
-      number: idx + 1,
-      text: q.text,
-      options: q.options,
-      correctAnswer: q.correctAnswer,
-    }));
+    // Try AI-powered generation first, fall back to curated pool
+    let selectedQuestions;
+    let generationMethod = 'ai';
+
+    try {
+      selectedQuestions = await generateStreakQuestions(rotatingSubject);
+      console.log(`✅ AI generated ${selectedQuestions.length} questions for ${rotatingSubject}`);
+    } catch (aiError) {
+      console.warn('⚠️ AI generation failed, falling back to curated pool:', aiError);
+      generationMethod = 'curated';
+
+      const curatedList = CURATED_STREAK_QUESTIONS[rotatingSubject] || CURATED_STREAK_QUESTIONS.Music;
+      const shuffled = [...curatedList].sort(() => 0.5 - Math.random());
+      selectedQuestions = shuffled.slice(0, 20).map((q, idx) => ({
+        number: idx + 1,
+        text: q.text,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+      }));
+    }
 
     const quizId = uuidv4();
     const streakQuiz = {
@@ -76,6 +93,7 @@ export async function POST(request: Request) {
       quiz: streakQuiz,
       rotatingSubject,
       streakDate: todayDate,
+      generationMethod,
     }, { status: 201 });
   } catch (error) {
     console.error('Failed to generate daily streak quiz:', error);

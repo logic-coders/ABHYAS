@@ -7,7 +7,7 @@ import { Language } from '@/lib/pdf-parser';
 import { useTheme } from '@/lib/theme-context';
 import LanguageSelector from '@/components/LanguageSelector';
 
-const QUESTION_TIME_LIMIT = 30; // 30 seconds per question
+const QUESTION_TIME_LIMIT = 60; // 60 seconds per question
 
 interface QuizData {
   seriesId: string;
@@ -234,7 +234,7 @@ export default function QuizPage() {
             <div className="rule-item">
               <span className="rule-icon">⏱️</span>
               <div>
-                <strong>30 Seconds Per Question:</strong>
+                <strong>60 Seconds Per Question:</strong>
                 <p>Timer begins immediately. If time expires, the question is marked as skipped and auto-advances.</p>
               </div>
             </div>
@@ -364,7 +364,7 @@ export default function QuizPage() {
             <span className="quiz-badge">{quizData.subject.toUpperCase()}</span>
             <div className="quiz-titles">
               <span className="quiz-main-title">{quizData.seriesTitle}</span>
-              <span className="quiz-sub-title">20 Questions • 30s per Question</span>
+              <span className="quiz-sub-title">20 Questions • 60s per Question</span>
             </div>
           </div>
 

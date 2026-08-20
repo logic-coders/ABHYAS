@@ -1,109 +1,92 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { TestSeries, Subject } from '@/lib/types';
+import { Subject, TestSeries } from '@/lib/types';
+import MiniStreakCalendar from '@/components/MiniStreakCalendar';
 import SubjectFilter from '@/components/SubjectFilter';
-import TestSeriesCard from '@/components/TestSeriesCard';
 
-export default function QuizDashboardPage() {
+function QuizDashboardContent() {
   const router = useRouter();
-  const [quizzes, setQuizzes] = useState<TestSeries[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<Subject | 'All'>('All');
+  const searchParams = useSearchParams();
+  const urlSubject = searchParams.get('subject') as Subject | null;
+  
   const [isLoading, setIsLoading] = useState(true);
-  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState<Subject | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | 'All'>(urlSubject || 'All');
 
   // Streak state
   const [streakData, setStreakData] = useState<{
-    streak: { currentStreak: number; longestStreak: number; lastStreakDate: string | null; isTodayCompleted: boolean };
+    streak: {
+      currentStreak: number;
+      longestStreak: number;
+      lastStreakDate: string | null;
+      streakHistory: string[];
+      isTodayCompleted: boolean;
+    };
     todaySubject: Subject;
     streakDate: string;
     streakQuiz: { id: string; title: string; subject: Subject; durationPerQuestion: number } | null;
   } | null>(null);
 
+  const [streakQuizzes, setStreakQuizzes] = useState<TestSeries[]>([]);
+
   useEffect(() => {
-    fetchQuizzes();
-    fetchStreakInfo();
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const subj = params.get('subject');
-      if (subj && ['Music', 'Math', 'History', 'Geography'].includes(subj)) {
-        setSelectedSubject(subj as Subject);
-      }
-    }
+    fetchData();
   }, []);
 
-  const fetchQuizzes = async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch('/api/test-series');
-      if (!res.ok) throw new Error('Failed to fetch');
-      const data: TestSeries[] = await res.json();
-      // Only keep Speed Quizzes
-      const quizOnly = data.filter((s) => s.isQuiz || s.format === 'quiz');
-      setQuizzes(quizOnly);
+      setIsLoading(true);
+      const [streakRes, quizzesRes] = await Promise.all([
+        fetch('/api/streak'),
+        fetch('/api/test-series?streakOnly=true')
+      ]);
+      
+      if (streakRes.ok) {
+        setStreakData(await streakRes.json());
+      }
+      if (quizzesRes.ok) {
+        const data = await quizzesRes.json();
+        // Sort by streakDate descending
+        data.sort((a: any, b: any) => {
+          if (!a.streakDate) return 1;
+          if (!b.streakDate) return -1;
+          return new Date(b.streakDate).getTime() - new Date(a.streakDate).getTime();
+        });
+        setStreakQuizzes(data);
+      }
     } catch (err) {
       console.error(err);
-      setError('Failed to load speed quizzes. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchStreakInfo = async () => {
-    try {
-      const res = await fetch('/api/streak');
-      if (!res.ok) return;
-      const data = await res.json();
-      setStreakData(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Launch instant 20-question Speed Quiz
-  const handleStartInstantQuiz = async (subject: Subject) => {
-    setIsGeneratingQuiz(subject);
-    try {
-      const res = await fetch('/api/quiz/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to start speed quiz');
-      }
-
-      const data = await res.json();
-      router.push(`/quiz/${data.quiz.id}`);
-    } catch (err) {
-      console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to start speed quiz');
-    } finally {
-      setIsGeneratingQuiz(null);
-    }
-  };
-
-  const filtered =
-    selectedSubject === 'All'
-      ? quizzes
-      : quizzes.filter((s) => s.subject === selectedSubject);
+  const filteredQuizzes = selectedSubject === 'All'
+    ? streakQuizzes
+    : streakQuizzes.filter(q => q.subject === selectedSubject);
 
   return (
     <div className="container">
       {/* Quiz Dashboard Header */}
       <section className="quiz-header-section">
-        <div className="quiz-pill-tag">⚡ SPEED QUIZ ARENA</div>
-        <h1 className="header-title">20 Questions • 30s Per Question</h1>
+        <div className="quiz-pill-tag">🔥 DAILY STREAK ARENA</div>
+        <h1 className="header-title">Daily Streak Quiz</h1>
         <p className="header-desc">
-          High-yield rapid quizzes designed to test instant recall, reaction time, and precision under pressure.
+          Complete your daily 20-question challenge to build and maintain your streak.
+          Each day brings a new subject — stay consistent, stay sharp.
         </p>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="streak-loading">
+            <div className="skeleton" style={{ height: '180px', borderRadius: 'var(--radius-xl)', maxWidth: '960px', margin: '0 auto' }} />
+          </div>
+        )}
+
         {/* ── Daily Streak Banner ── */}
-        {streakData && (
+        {!isLoading && streakData && (
           <div className="daily-streak-banner">
             <div className="streak-left">
               <div className="streak-tag-row">
@@ -118,94 +101,118 @@ export default function QuizDashboardPage() {
                   ? '🎉 Streak completed for today! Keep the momentum alive tomorrow.'
                   : `Complete today's 20 questions to maintain your ${streakData.streak.currentStreak}-day streak!`}
               </p>
+
+              {/* Streak Stats Inline */}
+              <div className="streak-stats-row">
+                <div className="streak-stat">
+                  <span className="stat-num">{streakData.streak.currentStreak}</span>
+                  <span className="stat-label-small">Current Streak</span>
+                </div>
+                <div className="streak-stat">
+                  <span className="stat-num">{streakData.streak.longestStreak}</span>
+                  <span className="stat-label-small">Longest Streak</span>
+                </div>
+                <div className="streak-stat">
+                  <span className="stat-num">{streakData.streak.streakHistory?.length || 0}</span>
+                  <span className="stat-label-small">Total Days</span>
+                </div>
+              </div>
+
+              <div className="cta-wrapper">
+                {streakData.streakQuiz ? (
+                  <Link
+                    href={`/quiz/${streakData.streakQuiz.id}`}
+                    className={`btn ${streakData.streak.isTodayCompleted ? 'btn-secondary' : 'btn-streak-cta'}`}
+                  >
+                    {streakData.streak.isTodayCompleted ? '🔁 Retake Streak Quiz' : '⚡ Start Streak Quiz →'}
+                  </Link>
+                ) : (
+                  <div className="no-streak-notice">
+                    <span className="notice-icon">📋</span>
+                    <p>Today&apos;s streak quiz hasn&apos;t been generated yet.</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="streak-right">
-              {streakData.streakQuiz ? (
-                <Link
-                  href={`/quiz/${streakData.streakQuiz.id}`}
-                  className={`btn ${streakData.streak.isTodayCompleted ? 'btn-secondary' : 'btn-streak-cta'}`}
-                >
-                  {streakData.streak.isTodayCompleted ? '🔁 Retake Streak Quiz' : '⚡ Start Streak Quiz →'}
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-streak-cta"
-                  onClick={() => handleStartInstantQuiz(streakData.todaySubject)}
-                >
-                  ⚡ Start {streakData.todaySubject} Blitz →
-                </button>
-              )}
+              <div className="mini-cal-container">
+                <MiniStreakCalendar completedDates={streakData.streak.streakHistory || []} />
+              </div>
             </div>
           </div>
         )}
-
-        {/* Instant Speed Quiz Quick Launcher Banner */}
-        <div className="instant-quiz-banner">
-          <div className="banner-left">
-            <span className="banner-badge">⚡ INSTANT BLITZ</span>
-            <h2 className="banner-title">Take a 20-Question Blitz (30s / Question)</h2>
-            <p className="banner-desc">Select a subject to instantly generate a 20-question rapid quiz:</p>
-          </div>
-          <div className="banner-actions">
-            {(['Music', 'Math', 'History', 'Geography'] as Subject[]).map((subj) => (
-              <button
-                key={subj}
-                className="btn btn-instant-quiz"
-                onClick={() => handleStartInstantQuiz(subj)}
-                disabled={isGeneratingQuiz !== null}
-                type="button"
-              >
-                {isGeneratingQuiz === subj ? (
-                  <>
-                    <span className="spinner-mini" /> Starting...
-                  </>
-                ) : (
-                  <>⚡ {subj}</>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
       </section>
 
-      {/* Subject Filter */}
-      <SubjectFilter selected={selectedSubject} onChange={setSelectedSubject} />
+      {/* ── Streak Quizzes List ── */}
+      {!isLoading && streakQuizzes.length > 0 && (
+        <section className="quizzes-list-section">
+          <SubjectFilter selected={selectedSubject} onChange={setSelectedSubject} />
 
-      {/* Speed Quiz Grid */}
-      {isLoading ? (
-        <div className="card-grid">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="skeleton" style={{ height: '220px' }} />
-          ))}
-        </div>
-      ) : error ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">⚠️</div>
-          <p className="empty-state-text">{error}</p>
-          <button className="btn btn-primary" onClick={fetchQuizzes}>
-            Try Again
-          </button>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">⚡</div>
-          <p className="empty-state-text">
-            {selectedSubject === 'All'
-              ? 'No Speed Quizzes generated yet'
-              : `No Speed Quizzes for ${selectedSubject}`}
-          </p>
-          <p className="empty-state-hint">
-            Click any subject button in the Instant Blitz banner above to generate and take your first speed quiz!
-          </p>
-        </div>
-      ) : (
-        <div className="card-grid">
-          {filtered.map((s, idx) => (
-            <TestSeriesCard key={s.id} series={s} index={idx} />
-          ))}
-        </div>
+          <div className="quiz-table-wrapper">
+            <table className="quiz-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '40px' }}>Status</th>
+                  <th>Title</th>
+                  <th>Subject</th>
+                  <th>Date</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQuizzes.length > 0 ? (
+                  filteredQuizzes.map((quiz) => {
+                    const isCompleted = streakData?.streak.streakHistory.includes(quiz.streakDate || '');
+                    return (
+                      <tr key={quiz.id}>
+                        <td style={{ textAlign: 'center' }}>
+                          {isCompleted ? (
+                            <span className="status-icon done">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            </span>
+                          ) : (
+                            <span className="status-icon pending">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                              </svg>
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <Link href={`/quiz/${quiz.id}`} className="quiz-title-link">
+                            {quiz.title}
+                          </Link>
+                        </td>
+                        <td>
+                          <span className="quiz-subject">{quiz.subject}</span>
+                        </td>
+                        <td>
+                          <span className="quiz-date">
+                            {quiz.streakDate ? new Date(quiz.streakDate).toLocaleDateString('en-GB') : 'Unknown'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <Link href={`/quiz/${quiz.id}`} className="btn-table-action">
+                            {isCompleted ? 'Retake' : 'Start'}
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '3rem' }}>
+                      <p style={{ color: 'var(--text-muted)' }}>No quizzes found for {selectedSubject}.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
       {/* Bottom spacer */}
@@ -223,9 +230,9 @@ export default function QuizDashboardPage() {
           font-size: 0.75rem;
           font-weight: 800;
           letter-spacing: 0.08em;
-          color: #f59e0b;
-          background: rgba(245, 158, 11, 0.15);
-          border: 1px solid rgba(245, 158, 11, 0.3);
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.12);
+          border: 1px solid rgba(239, 68, 68, 0.3);
           padding: 0.25rem 0.75rem;
           border-radius: var(--radius-full);
           margin-bottom: 0.75rem;
@@ -244,34 +251,37 @@ export default function QuizDashboardPage() {
           color: var(--text-muted);
           max-width: 600px;
           margin: 0 auto 2rem auto;
+          line-height: 1.6;
         }
 
         /* ── Daily Streak Banner ── */
         .daily-streak-banner {
-          background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.12));
-          border: 1px solid rgba(239, 68, 68, 0.35);
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08));
+          border: 1px solid rgba(239, 68, 68, 0.25);
           border-radius: var(--radius-xl);
-          padding: 1.75rem 2rem;
+          padding: 2rem 2.25rem;
           margin: 0 auto 1.5rem auto;
-          max-width: 860px;
+          max-width: 960px;
           display: flex;
-          align-items: center;
+          align-items: stretch;
           justify-content: space-between;
           flex-wrap: wrap;
-          gap: 1.5rem;
+          gap: 2rem;
           text-align: left;
         }
 
         .streak-left {
           flex: 1;
-          min-width: 280px;
+          min-width: 320px;
+          display: flex;
+          flex-direction: column;
         }
 
         .streak-tag-row {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          margin-bottom: 0.4rem;
+          margin-bottom: 0.5rem;
         }
 
         .streak-pill {
@@ -294,141 +304,255 @@ export default function QuizDashboardPage() {
         }
 
         .streak-title {
-          font-size: 1.25rem;
+          font-size: 1.4rem;
           font-weight: 800;
           color: var(--text-primary);
-          margin-bottom: 0.25rem;
+          margin-bottom: 0.35rem;
         }
 
         .streak-desc {
-          font-size: 0.88rem;
+          font-size: 0.95rem;
           color: var(--text-secondary);
-          margin: 0;
+          margin: 0 0 1.25rem 0;
+          line-height: 1.5;
+        }
+
+        /* Inline Stats */
+        .streak-stats-row {
+          display: flex;
+          gap: 1.25rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .streak-stat {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-md);
+          padding: 0.6rem 1rem;
+          min-width: 85px;
+        }
+
+        .stat-num {
+          font-size: 1.4rem;
+          font-weight: 800;
+          color: var(--text-primary);
+          line-height: 1;
+        }
+
+        .stat-label-small {
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-top: 0.25rem;
+        }
+
+        .cta-wrapper {
+          margin-top: auto;
         }
 
         .btn-streak-cta {
           background: linear-gradient(135deg, #ef4444, #f59e0b);
           color: #ffffff;
           border: none;
-          padding: 0.75rem 1.4rem;
-          font-size: 0.95rem;
+          padding: 0.85rem 1.75rem;
+          font-size: 1rem;
           font-weight: 800;
           border-radius: var(--radius-md);
           cursor: pointer;
           transition: all 0.2s ease;
           text-decoration: none;
           display: inline-block;
+          box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
 
         .btn-streak-cta:hover {
           transform: translateY(-2px);
-          box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
+          box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
         }
 
-        /* ── Instant Quiz Banner ── */
-        .instant-quiz-banner {
-          background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(236, 72, 153, 0.08));
-          border: 1px solid rgba(245, 158, 11, 0.25);
-          border-radius: var(--radius-xl);
-          padding: 1.75rem 2rem;
-          margin: 0 auto 2.5rem auto;
-          max-width: 860px;
+        .no-streak-notice {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 1.5rem;
+          gap: 0.6rem;
+          background: var(--bg-card);
+          border: 1px solid var(--border-medium);
+          border-radius: var(--radius-md);
+          padding: 0.85rem 1.25rem;
+          display: inline-flex;
+        }
+
+        .notice-icon {
+          font-size: 1.2rem;
+          flex-shrink: 0;
+        }
+
+        .no-streak-notice p {
+          font-size: 0.85rem;
+          color: var(--text-secondary);
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .streak-right {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-left: 1px solid var(--border-subtle);
+          padding-left: 2rem;
+        }
+
+        .mini-cal-container {
+          background: var(--bg-card);
+          border: 1px solid var(--border-medium);
+          border-radius: var(--radius-md);
+          padding: 1.25rem;
+          box-shadow: var(--shadow-sm);
+        }
+
+        /* ── Quizzes List ── */
+        .quizzes-list-section {
+          max-width: 960px;
+          margin: 2rem auto 0 auto;
+        }
+
+        .quiz-table-wrapper {
+          background: var(--bg-card);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-lg);
+          overflow: hidden;
+        }
+
+        .quiz-table {
+          width: 100%;
+          border-collapse: collapse;
           text-align: left;
         }
 
-        .banner-left {
-          flex: 1;
-          min-width: 280px;
-        }
-
-        .banner-badge {
-          font-size: 0.72rem;
-          font-weight: 800;
-          letter-spacing: 0.08em;
-          color: #f59e0b;
-          background: rgba(245, 158, 11, 0.15);
-          padding: 0.2rem 0.6rem;
-          border-radius: var(--radius-full);
-          display: inline-block;
-          margin-bottom: 0.4rem;
-        }
-
-        .banner-title {
-          font-size: 1.15rem;
-          font-weight: 800;
-          color: var(--text-primary);
-          margin-bottom: 0.25rem;
-        }
-
-        .banner-desc {
+        .quiz-table th {
+          background: rgba(255, 255, 255, 0.02);
+          padding: 1rem 1.25rem;
           font-size: 0.85rem;
-          color: var(--text-muted);
-          margin: 0;
-        }
-
-        .banner-actions {
-          display: flex;
-          gap: 0.6rem;
-          flex-wrap: wrap;
-        }
-
-        .btn-instant-quiz {
-          background: var(--bg-card);
-          color: var(--text-primary);
-          border: 1px solid var(--border-medium);
-          padding: 0.6rem 1rem;
-          font-size: 0.88rem;
           font-weight: 700;
-          border-radius: var(--radius-md);
-          cursor: pointer;
-          transition: all 0.2s ease;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .quiz-table td {
+          padding: 1rem 1.25rem;
+          border-bottom: 1px solid var(--border-subtle);
+          vertical-align: middle;
+        }
+
+        .quiz-table tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .quiz-table tbody tr:hover {
+          background: rgba(255, 255, 255, 0.02);
+        }
+
+        .status-icon {
           display: inline-flex;
           align-items: center;
-          gap: 0.4rem;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
         }
 
-        .btn-instant-quiz:hover:not(:disabled) {
-          border-color: #f59e0b;
-          background: rgba(245, 158, 11, 0.1);
-          color: #f59e0b;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+        .status-icon.done {
+          color: #3b82f6; /* Blue check */
         }
 
-        .spinner-mini {
-          width: 14px;
-          height: 14px;
-          border: 2px solid rgba(245, 158, 11, 0.3);
-          border-top-color: #f59e0b;
-          border-radius: 50%;
-          animation: spin 0.6s linear infinite;
+        .status-icon.pending {
+          color: var(--text-muted);
         }
 
-        @keyframes spin {
-          to { transform: rotate(360deg); }
+        .status-icon svg {
+          width: 100%;
+          height: 100%;
+        }
+
+        .quiz-title-link {
+          font-size: 1rem;
+          font-weight: 600;
+          color: var(--text-primary);
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+
+        .quiz-title-link:hover {
+          color: #3b82f6;
+        }
+
+        .quiz-subject {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: var(--text-secondary);
+        }
+
+        .quiz-date {
+          font-size: 0.85rem;
+          color: var(--text-muted);
+        }
+
+        .btn-table-action {
+          display: inline-block;
+          padding: 0.4rem 0.8rem;
+          font-size: 0.8rem;
+          font-weight: 700;
+          border-radius: var(--radius-sm);
+          background: rgba(255, 255, 255, 0.08);
+          color: var(--text-secondary);
+          text-decoration: none;
+          transition: all 0.2s ease;
+        }
+
+        .btn-table-action:hover {
+          background: rgba(255, 255, 255, 0.15);
+          color: var(--text-primary);
         }
 
         @media (max-width: 768px) {
-          .daily-streak-banner,
-          .instant-quiz-banner {
+          .daily-streak-banner {
             flex-direction: column;
             text-align: center;
-            padding: 1.25rem;
+            padding: 1.5rem;
           }
           .streak-tag-row {
             justify-content: center;
           }
-          .banner-actions {
+          .streak-stats-row {
             justify-content: center;
-            width: 100%;
+          }
+          .streak-right {
+            border-left: none;
+            border-top: 1px solid var(--border-subtle);
+            padding-left: 0;
+            padding-top: 1.5rem;
+          }
+          .quiz-table th:nth-child(3),
+          .quiz-table td:nth-child(3),
+          .quiz-table th:nth-child(4),
+          .quiz-table td:nth-child(4) {
+            display: none;
           }
         }
       `}</style>
     </div>
+  );
+}
+
+export default function QuizDashboardPage() {
+  return (
+    <Suspense fallback={<div className="container" style={{ padding: '4rem', textAlign: 'center' }}>Loading Quiz Dashboard...</div>}>
+      <QuizDashboardContent />
+    </Suspense>
   );
 }
