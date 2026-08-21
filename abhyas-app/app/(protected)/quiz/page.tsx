@@ -185,6 +185,9 @@ function QuizDashboardContent() {
                           <Link href={`/quiz/${quiz.id}`} className="quiz-title-link">
                             {quiz.title}
                           </Link>
+                          <div className="mobile-meta">
+                            {quiz.subject} • {quiz.streakDate ? new Date(quiz.streakDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown'}
+                          </div>
                         </td>
                         <td>
                           <span className="quiz-subject">{quiz.subject}</span>
@@ -491,6 +494,13 @@ function QuizDashboardContent() {
           color: #3b82f6;
         }
 
+        .mobile-meta {
+          display: none;
+          font-size: 0.75rem;
+          color: var(--text-muted);
+          margin-top: 0.25rem;
+        }
+
         .quiz-subject {
           font-size: 0.85rem;
           font-weight: 700;
@@ -542,6 +552,9 @@ function QuizDashboardContent() {
           .quiz-table th:nth-child(4),
           .quiz-table td:nth-child(4) {
             display: none;
+          }
+          .mobile-meta {
+            display: block;
           }
         }
       `}</style>
