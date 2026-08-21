@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-import { getTestSeriesById } from '@/lib/metadata-store';
+import { getTestSeriesById, updateTestSeriesCache } from '@/lib/metadata-store';
 import { downloadPDF } from '@/lib/s3';
 import { extractText, Language, parseQuestions } from '@/lib/pdf-parser';
 import { Question, ManualQuestion } from '@/lib/types';
@@ -30,6 +30,17 @@ export async function GET(
     // Read language from query parameter (default: 'en')
     const url = new URL(request.url);
     const lang = (url.searchParams.get('lang') || 'en') as Language;
+
+    // Check if the parsed questions for this language are already cached
+    if (series.cachedQuestions && series.cachedQuestions[lang] && series.cachedQuestions[lang].length > 0) {
+      return NextResponse.json({
+        seriesId: series.id,
+        seriesTitle: series.title,
+        subject: series.subject,
+        totalQuestions: series.cachedQuestions[lang].length,
+        questions: series.cachedQuestions[lang],
+      });
+    }
 
     let questions: Question[] = [];
 
@@ -100,6 +111,11 @@ export async function GET(
         { status: 422 }
       );
     }
+
+    // Save to cache asynchronously so we don't block the response
+    updateTestSeriesCache(series.id, lang, questions).catch(err => {
+      console.error('Failed to update cache:', err);
+    });
 
     return NextResponse.json({
       seriesId: series.id,

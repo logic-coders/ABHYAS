@@ -24,6 +24,14 @@ const TestSeriesSchema = new mongoose.Schema({
   manualQuestions: [ManualQuestionSchema],
   isDailyStreak: { type: Boolean, default: false },
   streakDate: { type: String },
+  cachedQuestions: { 
+    type: Map, 
+    of: [{
+      number: { type: Number, required: true },
+      text: { type: String, required: true },
+      options: [{ type: String }],
+    }]
+  }
 });
 
 export const TestSeries = mongoose.models.TestSeries || mongoose.model('TestSeries', TestSeriesSchema);

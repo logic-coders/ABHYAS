@@ -21,6 +21,9 @@ function toPlainTestSeries(doc: any): TestSeriesType {
     manualQuestions: doc.manualQuestions,
     isDailyStreak: Boolean(doc.isDailyStreak),
     streakDate: doc.streakDate,
+    cachedQuestions: doc.cachedQuestions instanceof Map 
+      ? Object.fromEntries(doc.cachedQuestions) 
+      : doc.cachedQuestions || {},
   };
 }
 
@@ -66,4 +69,14 @@ export async function markQuestionsAsUsed(subject: string, questions: { s3Key: s
 export async function clearUsedQuestions(subject: string): Promise<void> {
   await connectToDatabase();
   await UsedQuestion.deleteOne({ subject });
+}
+
+export async function updateTestSeriesCache(id: string, lang: string, questions: any[]): Promise<void> {
+  await connectToDatabase();
+  const updateQuery: Record<string, any> = {};
+  updateQuery[`cachedQuestions.${lang}`] = questions;
+  await TestSeries.findOneAndUpdate(
+    { id },
+    { $set: updateQuery }
+  );
 }

@@ -45,6 +45,7 @@ export interface TestSeries {
   manualQuestions?: ManualQuestion[];
   isDailyStreak?: boolean;
   streakDate?: string; // "YYYY-MM-DD"
+  cachedQuestions?: Record<string, Question[]>; // Keyed by language ('en' | 'hi')
 }
 
 /** A single parsed question (options only — no answer exposed to client) */
