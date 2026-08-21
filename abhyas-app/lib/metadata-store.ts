@@ -21,6 +21,8 @@ function toPlainTestSeries(doc: any): TestSeriesType {
     manualQuestions: doc.manualQuestions,
     isDailyStreak: Boolean(doc.isDailyStreak),
     streakDate: doc.streakDate,
+    testType: doc.testType || (doc.isRandom ? 'practice' : 'prev-year'),
+    durationMinutes: doc.durationMinutes,
     cachedQuestions: doc.cachedQuestions instanceof Map 
       ? Object.fromEntries(doc.cachedQuestions) 
       : doc.cachedQuestions || {},
@@ -47,6 +49,11 @@ export async function addTestSeries(entry: TestSeriesType): Promise<void> {
 export async function deleteTestSeries(id: string): Promise<void> {
   await connectToDatabase();
   await TestSeries.deleteOne({ id });
+}
+
+export async function updateTestSeriesTitle(id: string, title: string): Promise<void> {
+  await connectToDatabase();
+  await TestSeries.findOneAndUpdate({ id }, { $set: { title } });
 }
 
 export async function getUsedQuestions(subject: string): Promise<string[]> {

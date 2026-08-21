@@ -4,15 +4,19 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+function getS3Client(): S3Client {
+  return new S3Client({
+    region: process.env.AWS_REGION || 'ap-south-1',
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    },
+  });
+}
 
-const BUCKET = process.env.S3_BUCKET_NAME!;
+function getBucket(): string {
+  return process.env.S3_BUCKET_NAME || 'abhyas-app-pdfs-bucket';
+}
 
 /**
  * Upload a PDF buffer to S3 under the given key.
@@ -22,9 +26,10 @@ export async function uploadPDF(
   buffer: Buffer,
   key: string
 ): Promise<string> {
+  const s3 = getS3Client();
   await s3.send(
     new PutObjectCommand({
-      Bucket: BUCKET,
+      Bucket: getBucket(),
       Key: key,
       Body: buffer,
       ContentType: 'application/pdf',
@@ -37,9 +42,10 @@ export async function uploadPDF(
  * Download a PDF from S3 by key, returning the raw Buffer.
  */
 export async function downloadPDF(key: string): Promise<Buffer> {
+  const s3 = getS3Client();
   const res = await s3.send(
     new GetObjectCommand({
-      Bucket: BUCKET,
+      Bucket: getBucket(),
       Key: key,
     })
   );
@@ -59,9 +65,10 @@ export async function downloadPDF(key: string): Promise<Buffer> {
  * Upload a generic JSON object to S3.
  */
 export async function uploadJSON(key: string, data: unknown): Promise<void> {
+  const s3 = getS3Client();
   await s3.send(
     new PutObjectCommand({
-      Bucket: BUCKET,
+      Bucket: getBucket(),
       Key: key,
       Body: JSON.stringify(data, null, 2),
       ContentType: 'application/json',
@@ -75,9 +82,10 @@ export async function uploadJSON(key: string, data: unknown): Promise<void> {
  */
 export async function downloadJSON<T>(key: string): Promise<T | null> {
   try {
+    const s3 = getS3Client();
     const res = await s3.send(
       new GetObjectCommand({
-        Bucket: BUCKET,
+        Bucket: getBucket(),
         Key: key,
       })
     );

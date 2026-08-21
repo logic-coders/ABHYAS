@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import AdminForm from '@/components/AdminForm';
+import AdminTestManager from '@/components/admin/AdminTestManager';
 import AdminQuizManager from '@/components/admin/AdminQuizManager';
 import AdminStreakManager from '@/components/admin/AdminStreakManager';
 import UserApprovals from '@/components/UserApprovals';
 import UserDatabase from '@/components/admin/UserDatabase';
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'tests' | 'quiz' | 'streak' | 'users' | 'database'>('quiz');
+  const [activeTab, setActiveTab] = useState<'manage-tests' | 'tests' | 'quiz' | 'streak' | 'users' | 'database'>('manage-tests');
 
   return (
     <div className="container page-wrapper">
@@ -17,16 +18,22 @@ export default function AdminPage() {
           ⚙️ Admin Dashboard
         </h1>
         <p className="admin-description">
-          Create test series & speed quizzes, manage daily streaks, and administer user registrations.
+          Manage & create test series, generate practice quizzes, administer daily streaks, and review users.
         </p>
       </div>
 
       <div className="admin-tabs">
         <button 
+          className={`tab-btn ${activeTab === 'manage-tests' ? 'active' : ''}`}
+          onClick={() => setActiveTab('manage-tests')}
+        >
+          📋 Manage Tests
+        </button>
+        <button 
           className={`tab-btn ${activeTab === 'tests' ? 'active' : ''}`}
           onClick={() => setActiveTab('tests')}
         >
-          📝 Create Test Series
+          📝 Create Test
         </button>
         <button 
           className={`tab-btn ${activeTab === 'quiz' ? 'active' : ''}`}
@@ -54,6 +61,7 @@ export default function AdminPage() {
         </button>
       </div>
 
+      {activeTab === 'manage-tests' && <AdminTestManager />}
       {activeTab === 'tests' && <AdminForm />}
       {activeTab === 'quiz' && <AdminQuizManager />}
       {activeTab === 'streak' && <AdminStreakManager />}

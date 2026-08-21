@@ -245,12 +245,25 @@ ${JSON.stringify(chunk, null, 2)}`;
       console.warn(`Cleaning length mismatch: expected ${questions.length}, got ${cleanedQuestions.length}`);
     }
 
-    // Return cleaned results, stripping out ABC prefixes from options just in case
-    return cleanedQuestions.map(q => ({
-      number: q.number,
-      text: q.text,
-      options: (q.options || []).map(opt => opt.replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '').trim()),
-    }));
+    // Return cleaned results, preserving exact original options count and non-empty options
+    return cleanedQuestions.map((q, idx) => {
+      const orig = questions[idx];
+      let opts = (q.options || []).map((opt, oIdx) => {
+        const cleaned = opt.replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '').trim();
+        if (!cleaned && orig && orig.options && orig.options[oIdx]) {
+          return orig.options[oIdx].replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '').trim() || orig.options[oIdx].trim();
+        }
+        return cleaned || opt.trim();
+      });
+      if (orig && orig.options && opts.length > orig.options.length) {
+        opts = opts.slice(0, orig.options.length);
+      }
+      return {
+        number: orig ? orig.number : q.number,
+        text: q.text || (orig ? orig.text : ''),
+        options: opts.length > 0 ? opts : (orig ? orig.options : []),
+      };
+    });
   } catch (error) {
     console.error('Failed to clean Hindi questions via LLM:', error);
     return questions; // Graceful fallback to regex-only cleaned questions

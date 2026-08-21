@@ -5,16 +5,10 @@ import { Subject, SUBJECTS, SUBJECT_ICONS } from '@/lib/types';
 
 export default function AdminForm() {
   const [title, setTitle] = useState('');
-  const [subject, setSubject] = useState<Subject>('Math');
-  const [startQ, setStartQ] = useState('');
-  const [endQ, setEndQ] = useState('');
+  const [subject, setSubject] = useState<Subject>('Music');
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  // State for random test generation
-  const [randomSubject, setRandomSubject] = useState<Subject>('Math');
-  const [isGenerating, setIsGenerating] = useState(false);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -27,9 +21,6 @@ export default function AdminForm() {
     // Validation
     if (!title.trim()) return showToast('error', 'Title is required');
     if (!file) return showToast('error', 'Please upload a PDF file');
-    if (!startQ || !endQ) return showToast('error', 'Question range is required');
-    if (Number(startQ) >= Number(endQ))
-      return showToast('error', 'Start question must be less than end question');
 
     setIsLoading(true);
 
@@ -50,7 +41,7 @@ export default function AdminForm() {
 
       const { s3Key } = await uploadRes.json();
 
-      // Step 2: Create test series
+      // Step 2: Create full Prev Year test series (1 to 150 questions, 150 minutes)
       const createRes = await fetch('/api/test-series', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -58,8 +49,10 @@ export default function AdminForm() {
           title: title.trim(),
           subject,
           s3Key,
-          startQuestion: Number(startQ),
-          endQuestion: Number(endQ),
+          startQuestion: 1,
+          endQuestion: 150,
+          testType: 'prev-year',
+          durationMinutes: 150,
         }),
       });
 
@@ -68,13 +61,11 @@ export default function AdminForm() {
         throw new Error(err.error || 'Failed to create test series');
       }
 
-      showToast('success', `Test series "${title}" created successfully!`);
+      showToast('success', `Previous Year test "${title}" (150 Questions, 150 Mins) created and published to Prev Year page!`);
 
       // Reset form
       setTitle('');
-      setSubject('Math');
-      setStartQ('');
-      setEndQ('');
+      setSubject('Music');
       setFile(null);
       // Reset file input
       const fileInput = document.getElementById('pdf-upload') as HTMLInputElement;
@@ -87,43 +78,28 @@ export default function AdminForm() {
     }
   };
 
-  const handleGenerateRandomTest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsGenerating(true);
-    try {
-      const res = await fetch('/api/admin/generate-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject: randomSubject }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to generate test');
-      }
-
-      showToast('success', `Random test generated successfully for ${randomSubject}!`);
-    } catch (error) {
-      console.error('Generate error:', error);
-      showToast('error', error instanceof Error ? error.message : 'Something went wrong');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   return (
     <>
+      <div className="section-intro">
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.35rem' }}>
+          📜 Create Full Previous Year Test
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+          Upload an official question paper PDF. The system will automatically extract questions <strong>1 to 150</strong> in both English & Hindi, set a <strong>150-minute (2.5 hr)</strong> timer, and publish directly to the <strong>Prev Year</strong> page.
+        </p>
+      </div>
+
       <form className="admin-form" onSubmit={handleSubmit}>
         {/* Title */}
         <div className="form-group">
           <label htmlFor="series-title" className="form-label">
-            Test Series Title
+            Test Title (Display Name)
           </label>
           <input
             id="series-title"
             className="form-input"
             type="text"
-            placeholder="e.g., Music Theory — Chapter 3"
+            placeholder="e.g., 2024 UP Police Constable Official Paper"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -133,7 +109,7 @@ export default function AdminForm() {
         {/* Subject */}
         <div className="form-group">
           <label htmlFor="series-subject" className="form-label">
-            Subject
+            Subject (7 Subjects)
           </label>
           <select
             id="series-subject"
@@ -151,7 +127,7 @@ export default function AdminForm() {
 
         {/* PDF Upload */}
         <div className="form-group">
-          <label className="form-label">Upload PDF</label>
+          <label className="form-label">Upload Question Paper PDF (150 Questions)</label>
           <div className="file-input-wrapper">
             <input
               id="pdf-upload"
@@ -174,46 +150,9 @@ export default function AdminForm() {
           </div>
         </div>
 
-        {/* Question Range */}
-        <div className="range-group">
-          <div className="form-group">
-            <label htmlFor="start-question" className="form-label">
-              Start Question No.
-            </label>
-            <input
-              id="start-question"
-              className="form-input"
-              type="number"
-              min="1"
-              placeholder="e.g., 1"
-              value={startQ}
-              onChange={(e) => setStartQ(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="end-question" className="form-label">
-              End Question No.
-            </label>
-            <input
-              id="end-question"
-              className="form-input"
-              type="number"
-              min="1"
-              placeholder="e.g., 25"
-              value={endQ}
-              onChange={(e) => setEndQ(e.target.value)}
-              required
-            />
-          </div>
+        <div className="preset-info-badge">
+          <span>⚡ <strong>Fixed Format:</strong> 150 Questions • 150 Minutes (2.5 Hours) • Sequential Numbering (1–150) • Bilingual Support</span>
         </div>
-
-        {startQ && endQ && Number(endQ) > Number(startQ) && (
-          <p className="range-info">
-            📋 This test will have <strong>{Number(endQ) - Number(startQ) + 1}</strong> questions (Q
-            {startQ} – Q{endQ})
-          </p>
-        )}
 
         {/* Submit */}
         <button className="btn btn-primary btn-lg" type="submit" disabled={isLoading}>
@@ -222,43 +161,7 @@ export default function AdminForm() {
               <span className="spinner" /> Uploading & Creating...
             </>
           ) : (
-            'Create Test Series'
-          )}
-        </button>
-      </form>
-
-      <div style={{ margin: '3rem 0', height: '1px', background: 'var(--border-subtle)' }} />
-
-      <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Generate Random Test</h2>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-        Creates a new test series with 80 random questions selected from all previously uploaded PDFs for the selected subject.
-      </p>
-
-      <form className="admin-form" onSubmit={handleGenerateRandomTest}>
-        <div className="form-group">
-          <label htmlFor="random-subject" className="form-label">
-            Subject
-          </label>
-          <select
-            id="random-subject"
-            className="form-select"
-            value={randomSubject}
-            onChange={(e) => setRandomSubject(e.target.value as Subject)}
-          >
-            {SUBJECTS.map((s) => (
-              <option key={s} value={s}>
-                {SUBJECT_ICONS[s]} {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button className="btn btn-secondary btn-lg" type="submit" disabled={isGenerating}>
-          {isGenerating ? (
-            <>
-              <span className="spinner" /> Generating...
-            </>
-          ) : (
-            'Generate 80-Question Test'
+            'Publish 150-Question Prev Year Test'
           )}
         </button>
       </form>
@@ -279,29 +182,18 @@ export default function AdminForm() {
           animation: fadeInUp 0.5s ease;
         }
 
-        .range-group {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-        }
-
-        .range-info {
+        .preset-info-badge {
           font-size: 0.88rem;
           color: var(--text-secondary);
-          padding: 0.6rem 0.85rem;
-          background: var(--bg-glass);
-          border-radius: var(--radius-sm);
-          border: 1px solid var(--border-subtle);
+          padding: 0.75rem 1rem;
+          background: rgba(99, 102, 241, 0.08);
+          border-radius: var(--radius-md);
+          border: 1px solid rgba(99, 102, 241, 0.25);
+          line-height: 1.45;
         }
 
-        .range-info strong {
-          color: var(--accent-light);
-        }
-
-        @media (max-width: 480px) {
-          .range-group {
-            grid-template-columns: 1fr;
-          }
+        .preset-info-badge strong {
+          color: var(--accent);
         }
       `}</style>
     </>

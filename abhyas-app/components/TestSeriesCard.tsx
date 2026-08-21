@@ -13,6 +13,8 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
   const subjectColor = isQuiz ? '#f59e0b' : SUBJECT_COLORS[series.subject];
   const icon = isQuiz ? '⚡' : SUBJECT_ICONS[series.subject];
   
+  const isPrevYear = !isQuiz && !series.isRandom;
+
   const questionCount = isQuiz
     ? (series.manualQuestions?.length || series.randomQuestions?.length || 20)
     : series.isRandom
@@ -21,7 +23,7 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
         ? series.manualQuestions.length
         : (typeof series.endQuestion === 'number' && typeof series.startQuestion === 'number'
             ? series.endQuestion - series.startQuestion + 1
-            : 80);
+            : 150);
 
   // Strip any trailing date strings (e.g. "- 8/10/2026") from title
   const cleanTitle = series.title.replace(/\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}/, '');
@@ -48,6 +50,9 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
             {isQuiz && (
               <span className="quiz-badge">SPEED QUIZ</span>
             )}
+            {isPrevYear && (
+              <span className="prev-year-badge">PREV YEAR</span>
+            )}
             <span
               className="badge"
               style={{
@@ -70,7 +75,9 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
             📋 {questionCount} questions
           </span>
           <span className="meta-item">
-            {isQuiz ? '⏱️ 30s / question' : '⏱️ 1h 20m'}
+            {isQuiz
+              ? '⏱️ 30s / question'
+              : `⏱️ ${Math.floor((series.durationMinutes || (isPrevYear ? questionCount : 80)) / 60)}h ${(series.durationMinutes || (isPrevYear ? questionCount : 80)) % 60 > 0 ? `${(series.durationMinutes || (isPrevYear ? questionCount : 80)) % 60}m` : '00m'}`}
           </span>
         </div>
 
@@ -143,6 +150,17 @@ export default function TestSeriesCard({ series, index }: TestSeriesCardProps) {
           color: #f59e0b;
           background: rgba(245, 158, 11, 0.15);
           border: 1px solid rgba(245, 158, 11, 0.3);
+          padding: 0.15rem 0.45rem;
+          border-radius: var(--radius-full);
+        }
+
+        .prev-year-badge {
+          font-size: 0.68rem;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          color: #6366f1;
+          background: rgba(99, 102, 241, 0.15);
+          border: 1px solid rgba(99, 102, 241, 0.3);
           padding: 0.15rem 0.45rem;
           border-radius: var(--radius-full);
         }

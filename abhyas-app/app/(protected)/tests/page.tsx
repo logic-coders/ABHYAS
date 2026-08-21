@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { TestSeries, Subject } from '@/lib/types';
+import { TestSeries, Subject, SUBJECTS } from '@/lib/types';
 import SubjectFilter from '@/components/SubjectFilter';
 import TestSeriesCard from '@/components/TestSeriesCard';
 
@@ -22,9 +22,9 @@ export default function TestsPage() {
       const res = await fetch('/api/test-series');
       if (!res.ok) throw new Error('Failed to fetch');
       const data: TestSeries[] = await res.json();
-      // On Tests page, populate standard practice tests (80 Qs)
-      const testsOnly = data.filter((s) => !s.isQuiz && s.format !== 'quiz');
-      setSeries(testsOnly);
+      // On Practice page, populate randomly generated practice tests (or isRandom tests)
+      const practiceOnly = data.filter((s) => !s.isQuiz && s.format !== 'quiz' && s.isRandom);
+      setSeries(practiceOnly);
     } catch (err) {
       console.error(err);
       setError('Failed to load practice tests. Please try again.');
@@ -47,9 +47,9 @@ export default function TestsPage() {
     <div className="container">
       {/* Dashboard Header */}
       <section className="dashboard-header">
-        <h1 className="header-title">Available Practice Tests</h1>
+        <h1 className="header-title">Practice Tests</h1>
         <p className="header-desc">
-          Select a full 80-question test series below to begin your comprehensive practice exam.
+          Select a practice test series below to begin your comprehensive timed simulation.
         </p>
 
         {/* Instant Speed Quiz Banner (Read-only description, subject buttons redirect to specific quiz on Quiz page) */}
@@ -62,7 +62,7 @@ export default function TestsPage() {
             </p>
           </div>
           <div className="banner-actions">
-            {(['Music', 'Math', 'History', 'Geography'] as Subject[]).map((subj) => (
+            {SUBJECTS.map((subj) => (
               <button
                 key={subj}
                 className="btn btn-instant-quiz"

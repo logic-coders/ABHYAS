@@ -15,6 +15,7 @@ interface QuestionNavigatorProps {
   onSubmit: () => void;
   isSubmitting?: boolean;
   onTimeUp: () => void;
+  durationMinutes?: number;
 }
 
 export default function QuestionNavigator({
@@ -28,6 +29,7 @@ export default function QuestionNavigator({
   onSubmit,
   isSubmitting = false,
   onTimeUp,
+  durationMinutes,
 }: QuestionNavigatorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -74,7 +76,7 @@ export default function QuestionNavigator({
       <aside className="nav-panel">
         {/* Prominent Timer at the top */}
         <div className="nav-timer-container">
-          <ExamTimer seriesId={seriesId} onTimeUp={onTimeUp} />
+          <ExamTimer seriesId={seriesId} onTimeUp={onTimeUp} durationMinutes={durationMinutes} />
         </div>
 
         {/* Legend Summary Badges */}
@@ -180,7 +182,7 @@ export default function QuestionNavigator({
 
             {/* Mobile Timer */}
             <div style={{ marginBottom: '1rem' }}>
-              <ExamTimer seriesId={seriesId} onTimeUp={onTimeUp} />
+              <ExamTimer seriesId={seriesId} onTimeUp={onTimeUp} durationMinutes={durationMinutes} />
             </div>
 
             {/* Mobile Legend */}

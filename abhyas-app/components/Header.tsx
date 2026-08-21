@@ -82,7 +82,12 @@ export default function Header() {
               <>
                 <li className="desktop-only">
                   <Link href="/tests" className={`nav-link ${pathname === '/tests' ? 'active' : ''}`}>
-                    Tests
+                    Practice
+                  </Link>
+                </li>
+                <li className="desktop-only">
+                  <Link href="/prev-year" className={`nav-link ${pathname === '/prev-year' ? 'active' : ''}`}>
+                    Prev Year
                   </Link>
                 </li>
                 <li className="desktop-only">

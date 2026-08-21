@@ -5,12 +5,12 @@ import { useState, useEffect, useRef } from 'react';
 interface ExamTimerProps {
   seriesId: string;
   onTimeUp: () => void;
+  durationMinutes?: number;
 }
 
-const EXAM_DURATION_MS = 80 * 60 * 1000; // 1 hour 20 minutes
-
-export default function ExamTimer({ seriesId, onTimeUp }: ExamTimerProps) {
-  const [timeLeft, setTimeLeft] = useState<number>(EXAM_DURATION_MS);
+export default function ExamTimer({ seriesId, onTimeUp, durationMinutes = 150 }: ExamTimerProps) {
+  const durationMs = durationMinutes * 60 * 1000;
+  const [timeLeft, setTimeLeft] = useState<number>(durationMs);
   
   const onTimeUpRef = useRef(onTimeUp);
   useEffect(() => {
@@ -31,12 +31,12 @@ export default function ExamTimer({ seriesId, onTimeUp }: ExamTimerProps) {
         endTime = parsed;
       } else {
         sessionStorage.removeItem(storageKey);
-        endTime = now + EXAM_DURATION_MS;
+        endTime = now + durationMs;
         sessionStorage.setItem(storageKey, endTime.toString());
       }
     } else {
       // Set end time for the first time
-      endTime = now + EXAM_DURATION_MS;
+      endTime = now + durationMs;
       sessionStorage.setItem(storageKey, endTime.toString());
     }
 

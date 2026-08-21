@@ -5,7 +5,11 @@ import { Subject, SUBJECTS, SUBJECT_ICONS, ManualQuestion } from '@/lib/types';
 import { CURATED_STREAK_QUESTIONS } from '@/lib/streak-pool';
 
 export default function AdminQuizManager() {
-  const [method, setMethod] = useState<'manual' | 'pdf'>('manual');
+  const [method, setMethod] = useState<'random-practice' | 'manual' | 'pdf'>('random-practice');
+
+  // --- Random Practice Test State ---
+  const [randomSubject, setRandomSubject] = useState<Subject>('Music');
+  const [isGeneratingPractice, setIsGeneratingPractice] = useState(false);
 
   // --- PDF Method State ---
   const [pdfTitle, setPdfTitle] = useState('');
@@ -34,6 +38,32 @@ export default function AdminQuizManager() {
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  // --- Handle Random Practice Test Generation ---
+  const handleGenerateRandomPractice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsGeneratingPractice(true);
+    try {
+      const res = await fetch('/api/admin/generate-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: randomSubject }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to generate practice test');
+      }
+
+      const data = await res.json();
+      showToast('success', `Practice test "${data.title}" (80 Questions) generated and published to Practice page!`);
+    } catch (err) {
+      console.error(err);
+      showToast('error', err instanceof Error ? err.message : 'Failed to generate practice test');
+    } finally {
+      setIsGeneratingPractice(false);
+    }
   };
 
   // --- Handle PDF Submission ---
@@ -238,19 +268,65 @@ export default function AdminQuizManager() {
       <div className="method-toggle-container">
         <button
           type="button"
+          className={`method-btn ${method === 'random-practice' ? 'active' : ''}`}
+          onClick={() => setMethod('random-practice')}
+        >
+          🎯 Generate Practice Test
+        </button>
+        <button
+          type="button"
           className={`method-btn ${method === 'manual' ? 'active' : ''}`}
           onClick={() => setMethod('manual')}
         >
-          ✍️ Method 2: Manual Entry Builder
+          ✍️ Manual Quiz Builder
         </button>
         <button
           type="button"
           className={`method-btn ${method === 'pdf' ? 'active' : ''}`}
           onClick={() => setMethod('pdf')}
         >
-          📄 Method 1: Upload PDF Quiz
+          📄 Upload PDF Speed Quiz
         </button>
       </div>
+
+      {/* ── METHOD 0: RANDOM PRACTICE TEST GENERATION ── */}
+      {method === 'random-practice' && (
+        <form className="admin-form" onSubmit={handleGenerateRandomPractice}>
+          <div className="form-info-box">
+            <p>
+              <strong>Generate Full Practice Test:</strong> Randomly selects 80 questions from previously uploaded papers for the selected subject. The test is auto-named as <code>&#123;Subject&#125; Practice Test - S.N</code> and published directly to the <strong>Practice</strong> page with an 80-minute simulation timer.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="practice-subject" className="form-label">
+              Select Subject (7 Subjects)
+            </label>
+            <select
+              id="practice-subject"
+              className="form-select"
+              value={randomSubject}
+              onChange={(e) => setRandomSubject(e.target.value as Subject)}
+            >
+              {SUBJECTS.map((s) => (
+                <option key={s} value={s}>
+                  {SUBJECT_ICONS[s]} {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button className="btn btn-primary btn-lg" type="submit" disabled={isGeneratingPractice}>
+            {isGeneratingPractice ? (
+              <>
+                <span className="spinner" /> Generating 80-Question Practice Test...
+              </>
+            ) : (
+              'Generate & Publish Practice Test'
+            )}
+          </button>
+        </form>
+      )}
 
       {/* ── METHOD 1: PDF UPLOAD ── */}
       {method === 'pdf' && (

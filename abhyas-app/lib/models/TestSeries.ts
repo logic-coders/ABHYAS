@@ -24,6 +24,8 @@ const TestSeriesSchema = new mongoose.Schema({
   manualQuestions: [ManualQuestionSchema],
   isDailyStreak: { type: Boolean, default: false },
   streakDate: { type: String },
+  testType: { type: String, default: 'prev-year' },
+  durationMinutes: { type: Number },
   cachedQuestions: { 
     type: Map, 
     of: [{

@@ -17,6 +17,8 @@ interface ExamData {
   subject: string;
   totalQuestions: number;
   questions: Question[];
+  testType?: string;
+  durationMinutes?: number;
 }
 
 export default function ExamPage() {
@@ -344,6 +346,7 @@ export default function ExamPage() {
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               onTimeUp={handleTimeUp}
+              durationMinutes={examData.durationMinutes}
             />
           </div>
         </div>

@@ -60,18 +60,20 @@ export async function POST(request: NextRequest) {
     // 6. Mark as used
     await markQuestionsAsUsed(subject, selectedQuestions);
 
-    // 7. Create TestSeries with serial number instead of date
-    const randomCountForSubject = allSeries.filter((s) => s.subject === subject && s.isRandom).length + 1;
+    // 7. Create TestSeries with serial number naming convention
+    const randomCountForSubject = allSeries.filter((s) => s.subject === subject && (s.isRandom || s.testType === 'practice')).length + 1;
 
     const entry: TestSeries = {
       id: uuidv4(),
-      title: `Random ${subject} Test ${randomCountForSubject}`,
+      title: `${subject} Practice Test - ${randomCountForSubject}`,
       subject: subject as Subject,
       s3Key: '', // N/A for random tests
       startQuestion: 1,
       endQuestion: selectedQuestions.length,
       createdAt: new Date().toISOString(),
       isRandom: true,
+      testType: 'practice',
+      durationMinutes: 80,
       randomQuestions: selectedQuestions,
     };
 

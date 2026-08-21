@@ -100,8 +100,19 @@ export async function POST(
       // Download single PDF from S3
       const pdfBuffer = await downloadPDF(series.s3Key);
       const text = await extractText(pdfBuffer);
-      correctAnswers = parseAnswers(text, series.startQuestion || 1, series.endQuestion || 20);
-      questions = parseQuestions(text, series.startQuestion || 1, series.endQuestion || 20, lang);
+      const startQ = series.startQuestion || 1;
+      const endQ = series.endQuestion || 150;
+      const rawAnswers = parseAnswers(text, startQ, endQ);
+      const rawQuestions = parseQuestions(text, startQ, endQ, lang);
+
+      // Renumber questions 1..N and map correct answers to 1..N
+      questions = rawQuestions.map((q, idx) => ({ ...q, number: idx + 1 }));
+      rawQuestions.forEach((q, idx) => {
+        const ans = rawAnswers.get(q.number);
+        if (ans) {
+          correctAnswers.set(idx + 1, ans);
+        }
+      });
     }
 
     // Build a lookup for user answers

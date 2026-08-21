@@ -15,7 +15,8 @@ export default function MobileBottomNav() {
 
   // Determine active states
   const isHome = pathname === '/';
-  const isTests = pathname === '/tests';
+  const isPractice = pathname === '/tests';
+  const isPrevYear = pathname === '/prev-year';
   const isQuiz = pathname?.startsWith('/quiz');
   const isProfile = pathname?.startsWith('/profile') || pathname?.startsWith('/admin');
 
@@ -35,7 +36,7 @@ export default function MobileBottomNav() {
         </li>
 
         <li className="nav-item">
-          <Link href="/tests" className={`nav-link ${isTests ? 'active' : ''}`}>
+          <Link href="/tests" className={`nav-link ${isPractice ? 'active' : ''}`}>
             <div className="icon-wrapper">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -45,7 +46,19 @@ export default function MobileBottomNav() {
                 <polyline points="10 9 9 9 8 9"></polyline>
               </svg>
             </div>
-            <span>Tests</span>
+            <span>Practice</span>
+          </Link>
+        </li>
+
+        <li className="nav-item">
+          <Link href="/prev-year" className={`nav-link ${isPrevYear ? 'active' : ''}`}>
+            <div className="icon-wrapper">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <span>Prev Year</span>
           </Link>
         </li>
 

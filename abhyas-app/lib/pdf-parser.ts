@@ -49,35 +49,20 @@ function detectBlockLanguage(block: string): Language {
   const devanagariCount = (block.match(/[\u0900-\u097F]/g) || []).length;
   if (devanagariCount > 3) return 'hi';
 
-  // Detect garbled Hindi encoding patterns common in these PDFs
-  // These characters appear frequently in the Hindi transliteration
-  const garbledPatterns = /[¶§©ñÎÌÐÊ{}'«»‹›‹ÝÞåæ¡¢£¤¥¦¨ª¬®¯°±²³µ·¸¹º¼½¾]|H\$|Am¡|Cn¶|'|\u003c\u003e/g;
-  const garbledCount = (block.match(garbledPatterns) || []).length;
-  
-  // If more than 5 garbled characters relative to block length, it's likely Hindi
-  if (garbledCount > 5 && garbledCount / block.length > 0.02) return 'hi';
+  // Detect specific Kruti Dev words and glyphs common in Indian competitive exam PDFs
+  if (/Cn`|Cn¶|Cn\x27|Cn`w|उपर्युक्त|Zht|H\$[mso]|gß|Òda|amJ|Vmb|h°|h¢|Am°a|Am`o|nwpÒVH\$m|dJuH\$aU|J´m_|J ́m_|_‹`|CŒma|drjH|A\x5C\x27sH|CÂ_rXdma|AZwXoe|‡ÌZ|loUr|nwaÒH\$ma|dV©Zr/i.test(block)) return 'hi';
+
+  const krutiDevGlyphs = (block.match(/[¶§©ñÎÌÐÊ«»‹›ÝÞåæ¡¢£¤¥¦¨ª¬®¯°±²³µ·¸¹º¼½¾À-ÖØ-öø-ÿ‡•∫]/g) || []).length;
+  if (krutiDevGlyphs >= 2) return 'hi';
 
   return 'en';
 }
 
-
 /**
  * Parse questions (without answers) from PDF text in the given range.
  *
- * Expected PDF format:
- *   Q1. What is the capital of France?
- *   A. Berlin
- *   B. Madrid
- *   C. Paris
- *   D. Rome
- *
- *   Q2. ...
- *
- * Also supports: "1.", "1)", "Question 1." prefixes.
- *
- * The answer key section is expected after a line like:
- *   "Answer Key" or "Answers" or "ANSWER KEY"
- * Everything after that line is excluded from question parsing.
+ * Handles single/multi-column layouts, inner numbered lists (sub-points in match-the-column questions),
+ * English, Hindi (Unicode & Kruti Dev), and hybrid language papers.
  *
  * @param language - 'en' for English, 'hi' for Hindi. Defaults to 'en'.
  */
@@ -87,57 +72,88 @@ export function parseQuestions(
   end: number,
   language: Language = 'en'
 ): Question[] {
-  // Strip answer section
-  const questionText = stripAnswerSection(text);
+  // Strip answer section and cover page instructions
+  let questionText = stripAnswerSection(text);
+  questionText = stripInstructionsSection(questionText);
 
-  const questions: Question[] = [];
-
-  // Match question blocks: handles Q1., 1., 1), Question 1.  etc.
+  // Match question blocks: handles Q1., 1., 1), Question 1., E-1., H-1. etc.
   const questionRegex =
-    /(?:^|\n)\s*(?:Q(?:uestion)?\s*\.?\s*)?(\d+)[.)]\s*([\s\S]*?)(?=(?:(?:^|\n)\s*(?:Q(?:uestion)?\s*\.?\s*)?\d+[.)])|$)/gi;
+    /(?:^|\n)\s*(?:Q(?:uestion)?\s*\.?\s*|[EH]-)?(\d+)[.)]\s*([\s\S]*?)(?=(?:(?:^|\n)\s*(?:Q(?:uestion)?\s*\.?\s*|[EH]-)?\d+[.)])|$)/gi;
 
+  const rawMatches: { num: number; rawText: string }[] = [];
   let match: RegExpExecArray | null;
   while ((match = questionRegex.exec(questionText)) !== null) {
     const num = parseInt(match[1], 10);
-    if (num < start || num > end) continue;
+    rawMatches.push({
+      num,
+      rawText: match[2].trim(),
+    });
+  }
 
-    const block = match[2].trim();
-    if (!block) continue;
+  const allParsed: { question: Question; lang: Language }[] = [];
 
-    // Detect language of this question block and filter
-    const blockLang = detectBlockLanguage(block);
-    if (blockLang !== language) continue;
+  for (let i = 0; i < rawMatches.length; i++) {
+    const item = rawMatches[i];
+    if (item.num < 1 || item.num > 150) continue;
+    if (item.num < start || item.num > end) continue;
 
-    const parsed = parseQuestionBlock(num, block);
+    let parsed = parseQuestionBlock(item.num, item.rawText);
     if (parsed) {
-      if (language === 'hi') {
-        parsed.text = applyHindiCorrections(decodeHindi(parsed.text));
-        parsed.options = parsed.options.map((o) => {
-          const m = o.match(/^([(\s]*[A-Ja-j][).:\s]*)([\s\S]*)$/);
-          if (m) {
-            return m[1] + applyHindiCorrections(decodeHindi(m[2]));
-          }
-          return applyHindiCorrections(decodeHindi(o));
-        });
+      const blockLang = detectBlockLanguage(parsed.text + ' ' + parsed.options.join(' '));
+      allParsed.push({ question: parsed, lang: blockLang });
+    } else {
+      // Look ahead to merge with fragmented sub-lists (e.g. Q55/56 with inner numbered items 1..4)
+      let combinedText = item.rawText;
+      let foundParsed: Question | null = null;
+      for (let j = i + 1; j < Math.min(i + 8, rawMatches.length); j++) {
+        combinedText += '\n' + rawMatches[j].num + '. ' + rawMatches[j].rawText;
+        const testParsed = parseQuestionBlock(item.num, combinedText);
+        if (testParsed) {
+          foundParsed = testParsed;
+          i = j; // skip forward past merged inner fragments
+          break;
+        }
       }
-      questions.push(parsed);
+      if (foundParsed) {
+        const blockLang = detectBlockLanguage(foundParsed.text + ' ' + foundParsed.options.join(' '));
+        allParsed.push({ question: foundParsed, lang: blockLang });
+      }
     }
+  }
+
+  const questions: Question[] = [];
+
+  // For each question in the range [start, end], select the target language or best available
+  for (let n = start; n <= end; n++) {
+    const matching = allParsed.filter((item) => item.question.number === n);
+    if (matching.length === 0) continue;
+
+    // Prefer exact language match; if not available (e.g. English comprehension section in Hindi exam), fallback to the available one
+    const targetMatch = matching.find((item) => item.lang === language) || matching[0];
+    const finalQ: Question = {
+      number: targetMatch.question.number,
+      text: targetMatch.question.text,
+      options: [...targetMatch.question.options],
+    };
+
+    if (targetMatch.lang === 'hi' || (language === 'hi' && targetMatch.lang !== 'en')) {
+      finalQ.text = applyHindiCorrections(decodeHindi(finalQ.text));
+      finalQ.options = finalQ.options.map((o) => {
+        const m = o.match(/^([(\s]*[A-Ja-j][).:\s]*)([\s\S]*)$/);
+        if (m) {
+          return m[1] + applyHindiCorrections(decodeHindi(m[2]));
+        }
+        return applyHindiCorrections(decodeHindi(o));
+      });
+    }
+
+    questions.push(finalQ);
   }
 
   // Sort by question number
   questions.sort((a, b) => a.number - b.number);
 
-  // Deduplicate — keep only the first occurrence of each question number
-  const seen = new Set<number>();
-  const deduplicated: Question[] = [];
-  for (const q of questions) {
-    if (!seen.has(q.number)) {
-      seen.add(q.number);
-      deduplicated.push(q);
-    }
-  }
-
-  return deduplicated;
+  return questions;
 }
 
 /**
@@ -148,7 +164,7 @@ export function parseQuestions(
  * so no language parameter is needed.
  *
  * Expected answer key formats:
- *   1. C      or     1) C     or     Q1. C    or    1. (C)   or   1 - C
+ *   1. C      or     1) C     or     Q1. C    or    1. (C)   or   1 - C   or   E-1. C
  */
 export function parseAnswers(
   text: string,
@@ -178,7 +194,7 @@ export function parseAnswers(
     if (targetSetIndex !== -1) {
       const lines = answerSection.split('\n');
       for (const line of lines) {
-        const pairs = Array.from(line.matchAll(/(\d+)\s*[.):\-–\s]*\s*([A-Ea-e])/gi));
+        const pairs = Array.from(line.matchAll(/(?:[EH]-)?(\d+)\s*[.):\-–\s]*\s*([A-Ea-e])/gi));
         if (pairs.length > targetSetIndex) {
           const pair = pairs[targetSetIndex];
           const num = parseInt(pair[1], 10);
@@ -191,9 +207,9 @@ export function parseAnswers(
     }
   }
 
-  // Match patterns like: 1. C, 1) C, Q1. C, 1 - C, 1. (C), 1.(C), 1 C, 71C
+  // Match patterns like: 1. C, 1) C, Q1. C, 1 - C, 1. (C), 1.(C), 1 C, 71C, E-1. C
   const answerRegex =
-    /(?:Q(?:uestion)?\s*\.?\s*)?(\d+)\s*[.):\-–\s]*\s*\(?([A-Ea-e])\)?/gi;
+    /(?:Q(?:uestion)?\s*\.?\s*|[EH]-)?(\d+)\s*[.):\-–\s]*\s*\(?([A-Ea-e])\)?/gi;
 
   let match: RegExpExecArray | null;
   while ((match = answerRegex.exec(answerSection)) !== null) {
@@ -209,12 +225,70 @@ export function parseAnswers(
 /* ─── Internal helpers ─── */
 
 /**
- * Remove the answer key section from text, returning only question content.
+ * Remove the answer key section and back-cover instruction pages from text.
  */
 function stripAnswerSection(text: string): string {
-  const idx = findAnswerKeyIndex(text);
-  if (idx === -1) return text;
-  return text.substring(0, idx);
+  const endMarkers = [
+    /(?:FINAL|PROVISIONAL|2ND\s+PROVISIONAL)?\s*ANSWER\s*KEY/i,
+    /SET-[A-Z]\s*ANSWER\s*KEY/i,
+    /mÙkjkyk/i, // उत्तरमाला in Kruti Dev
+    /['_‘`’"“”]?h[ÎŒ]dnyU©\s*AZwXoe/i, // महत्वपूर्ण अनुदेश in Kruti Dev
+    /महत्वपूर्ण\s*अनुदेश/i,
+    /Note\s*:\s*English version of the instructions is printed on the First Page/i,
+    /SPACE\s*FOR\s*ROUGH\s*WORK/i,
+    /aµ?\$?\s*H\$m`©\s*Ho\$\s*\{bE\s*ÒWmZ/i,
+  ];
+
+  let minIdx = -1;
+  for (const marker of endMarkers) {
+    const match = marker.exec(text);
+    if (match && match.index > 5000) {
+      if (minIdx === -1 || match.index < minIdx) {
+        minIdx = match.index;
+      }
+    }
+  }
+
+  if (minIdx === -1) return text;
+  return text.substring(0, minIdx);
+}
+
+/**
+ * Remove cover page / "Important Instructions" before the actual exam begins.
+ */
+function stripInstructionsSection(text: string): string {
+  const startMarkers = [
+    /(?:^|\n)\s*Directions\s*\(Q\.\s*Nos\./i,
+    /(?:^|\n)\s*[EH]-1\./i,
+    /(?:^|\n)\s*Q(?:uestion)?\s*\.?\s*1[.)]/i,
+    /(?:^|\n)\s*1[.)]\s+[A-Z\u0080-\uFFFF]/i,
+    /(?:^|\n)\s*PART\s*[-–—]\s*I\s*(?:\n|\()/i,
+  ];
+
+  for (const marker of startMarkers) {
+    const m = marker.exec(text);
+    if (m && m.index > 500 && m.index < 10000) {
+      return text.substring(m.index);
+    }
+  }
+
+  return text;
+}
+
+/**
+ * Detect whether a parsed block or text is part of the examination instructions.
+ */
+function isInstructionBlock(text: string): boolean {
+  const norm = text.replace(/\s+/g, ' ');
+  if (/question booklet is divided|àíZ-nwpñVH\$m\s*VrZ\s*\^mJm|प्रश्न-पुस्तिका\s*तीन\s*भागों|दो\s*भागों\s*में\s*विभाजित/i.test(norm)) return true;
+  if (/important instructions|‘hÎdnyU©\s*AZwXoe|महत्वपूर्ण\s*अनुदेश|महत्वपूर्ण\s*निर्देश/i.test(norm)) return true;
+  if (/read the following instructions|निर्देशों को ध्यानपूर्वक|AZwXoem| Ho$ CÎma/i.test(norm)) return true;
+  if (/candidates must assure|narjm\s*\^dZ\s*N>mo|परीक्षा\s*भवन\s*छोड़ने/i.test(norm)) return true;
+  if (/immediately after commencement|narjm\s*àmap‘\^|परीक्षा\s*प्रारंभ\s*होने/i.test(norm)) return true;
+  if (/answer sheet will be supplied|OMR\s*sheet|self adhesive ldpe bag|LDPE Bag/i.test(norm)) return true;
+  if (/english version of the instructions is printed|printed on the first page/i.test(norm)) return true;
+  if (/printed pages including|rough work|रफ कार्य|a’\$ H\$m¶©/i.test(norm)) return true;
+  return false;
 }
 
 /**
@@ -231,10 +305,8 @@ function extractAnswerSection(text: string): string | null {
  */
 function findAnswerKeyIndex(text: string): number {
   const markers = [
-    /answer\s*key/i,
-    /\banswers?\b\s*[:]/i,
-    /\bcorrect\s+answers?\b/i,
-    /\bsolution(?:s)?\b\s*[:]/i,
+    /(?:FINAL|PROVISIONAL|2ND\s+PROVISIONAL)?\s*ANSWER\s*KEY/i,
+    /SET-[A-Z]\s*ANSWER\s*KEY/i,
     /mÙkjkyk/i, // उत्तरमाला (Uttarmala) in Kruti Dev
     /mÙkj\s*[:\-]/i, // उत्तर: (Uttar:) in Kruti Dev
   ];
@@ -249,34 +321,44 @@ function findAnswerKeyIndex(text: string): number {
 
 /**
  * Parse a single question block into a Question object.
- * The block contains the question text followed by options A–D.
+ * The block contains the question text followed by options A–E.
  */
 function parseQuestionBlock(num: number, block: string): Question | null {
-  // Try to split out options: A., A), (A), a., a) etc. (up to 10 options, A-J)
-  // Made trailing space \s* optional because Hindi PDFs often don't have spaces after (A)
-  const optionRegex = /(?<=\s|^)\(?([A-Ja-j])\)?\s*[.):]\s*/g;
+  // Match options: strictly (A), (B), (C), (D), (E) or A., B., C., D., E.
+  // Handles letters even without whitespace after parenthesis (e.g. `(C)`moJoe` or `(A){~_b`)
+  const optionRegex = /(?<=\s|^)(?:\(([A-Ea-e])\)|\b([A-Ea-e])\s*[.):])\s*(?!\.m\b)/g;
 
-  // Find all option positions
-  const optionPositions: { letter: string; index: number }[] = [];
+  const rawPositions: { letter: string; index: number }[] = [];
   let optMatch: RegExpExecArray | null;
   while ((optMatch = optionRegex.exec(block)) !== null) {
-    optionPositions.push({
-      letter: optMatch[1].toUpperCase(),
+    const letter = (optMatch[1] || optMatch[2]).toUpperCase();
+    rawPositions.push({
+      letter,
       index: optMatch.index,
     });
   }
 
+  // Filter positions to enforce strictly sequential option letters: A -> B -> C -> D (-> E)
+  const expectedLetters = ['A', 'B', 'C', 'D', 'E'];
+  const optionPositions: { letter: string; index: number }[] = [];
+  let expectedIdx = 0;
+
+  for (const pos of rawPositions) {
+    if (pos.letter === expectedLetters[expectedIdx]) {
+      optionPositions.push(pos);
+      expectedIdx++;
+      if (expectedIdx >= 5) break; // Max 5 options (A to E)
+    }
+  }
+
   // We need at least 2 options to consider this a valid question
   if (optionPositions.length < 2) {
-    // Treat whole block as question text with no parseable options
-    return {
-      number: num,
-      text: block,
-      options: [],
-    };
+    return null;
   }
 
   const questionText = block.substring(0, optionPositions[0].index).trim();
+  if (isInstructionBlock(questionText)) return null;
+
   const options: string[] = [];
 
   for (let i = 0; i < optionPositions.length; i++) {
@@ -290,6 +372,7 @@ function parseQuestionBlock(num: number, block: string): Question | null {
     // Remove trailing answer key section, P.T.O markers or garbage footers if accidentally included
     optionText = optionText.replace(/\[?\s*P\.?\s*T\.?\s*O\.?\s*\]?/gi, '');
     optionText = optionText.replace(/(\b(?:answer key|space for rough|rough work|रफ कार्य|SPअउए FजR|रμ’\$|प्रíन-पुpस्तका|महÎवपूर्ण अनुदेश>).*)[\s\S]*/i, '').trim();
+    optionText = optionText.replace(/\n+\s*\d{1,3}\s*\/\s*[A-Z\u0080-\uFFFF\-–—0-9\/() ]+\s*$/gi, '').trim();
 
     options.push(optionText);
   }

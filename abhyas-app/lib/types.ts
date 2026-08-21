@@ -1,14 +1,17 @@
 /* ─── Shared TypeScript types for Abhyas ─── */
 
-export type Subject = 'Music' | 'Math' | 'History' | 'Geography';
+export type Subject = 'Music' | 'Math' | 'History' | 'Geography' | 'Science' | 'English' | 'Hindi';
 
-export const SUBJECTS: Subject[] = ['Music', 'Math', 'History', 'Geography'];
+export const SUBJECTS: Subject[] = ['Music', 'Math', 'History', 'Geography', 'Science', 'English', 'Hindi'];
 
 export const SUBJECT_ICONS: Record<Subject, string> = {
   Music: '🎵',
   Math: '📐',
   History: '📜',
   Geography: '🌍',
+  Science: '🔬',
+  English: '📖',
+  Hindi: '✍️',
 };
 
 export const SUBJECT_COLORS: Record<Subject, string> = {
@@ -16,6 +19,9 @@ export const SUBJECT_COLORS: Record<Subject, string> = {
   Math: '#3b82f6',
   History: '#f59e0b',
   Geography: '#10b981',
+  Science: '#06b6d4',
+  English: '#ec4899',
+  Hindi: '#f97316',
 };
 
 export type ExamFormat = 'test' | 'quiz';
@@ -46,6 +52,8 @@ export interface TestSeries {
   isDailyStreak?: boolean;
   streakDate?: string; // "YYYY-MM-DD"
   cachedQuestions?: Record<string, Question[]>; // Keyed by language ('en' | 'hi')
+  testType?: 'prev-year' | 'practice'; // Type of test
+  durationMinutes?: number; // Duration in minutes (e.g. 150 for prev-year, 80 for practice)
 }
 
 /** A single parsed question (options only — no answer exposed to client) */

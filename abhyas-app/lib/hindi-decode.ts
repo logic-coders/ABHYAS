@@ -131,6 +131,8 @@ export function decodeHindi(text: string): string {
     "f": "ष",
     "O": "ज",
     "î": "ष्",
+    "$": "फ",
+    "\\$": "फ",
   };
 
   // Replace longest mappings first

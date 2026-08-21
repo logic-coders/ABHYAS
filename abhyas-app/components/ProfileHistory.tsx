@@ -126,7 +126,7 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
             className={`tab-btn ${activeTab === 'tests' ? 'active' : ''}`}
             onClick={() => setActiveTab('tests')}
           >
-            📝 Full Tests ({testResults.length})
+            📝 Practice & Exams ({testResults.length})
           </button>
           <button
             type="button"
@@ -143,14 +143,14 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
         <div className="glass-card" style={{ padding: '2.5rem', textAlign: 'center', marginTop: '1rem' }}>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
             {activeTab === 'tests'
-              ? 'No Full Tests taken yet.'
+              ? 'No Practice Tests taken yet.'
               : 'No Speed Quizzes taken yet.'}
           </p>
           <Link
             href={activeTab === 'tests' ? '/tests' : '/quiz'}
             className="btn btn-primary btn-sm"
           >
-            {activeTab === 'tests' ? 'Start a Test 📝' : 'Start a Quiz ⚡'}
+            {activeTab === 'tests' ? 'Start Practice 📝' : 'Start a Quiz ⚡'}
           </Link>
         </div>
       ) : (

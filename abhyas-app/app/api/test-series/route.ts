@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllTestSeries, addTestSeries } from '@/lib/metadata-store';
-import { TestSeries, Subject } from '@/lib/types';
+import { TestSeries, Subject, SUBJECTS } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getUser } from '@/lib/auth';
 
@@ -62,13 +62,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const validSubjects: Subject[] = ['Music', 'Math', 'History', 'Geography'];
-    if (!validSubjects.includes(subject)) {
+    if (!SUBJECTS.includes(subject)) {
       return NextResponse.json(
-        { error: `Invalid subject. Must be one of: ${validSubjects.join(', ')}` },
+        { error: `Invalid subject. Must be one of: ${SUBJECTS.join(', ')}` },
         { status: 400 }
       );
     }
+
+    const testType = body.testType || 'prev-year';
+    const durationMinutes = body.durationMinutes || (testType === 'prev-year' ? 150 : 80);
 
     const entry: TestSeries = {
       id: uuidv4(),
@@ -78,6 +80,9 @@ export async function POST(request: Request) {
       startQuestion: Number(startQuestion),
       endQuestion: Number(endQuestion),
       createdAt: new Date().toISOString(),
+      testType,
+      durationMinutes,
+      isRandom: false,
     };
 
     await addTestSeries(entry);

@@ -39,6 +39,8 @@ export async function GET(
         subject: series.subject,
         totalQuestions: series.cachedQuestions[lang].length,
         questions: series.cachedQuestions[lang],
+        testType: series.testType || (series.isRandom ? 'practice' : 'prev-year'),
+        durationMinutes: series.durationMinutes || (series.isRandom ? 80 : 150),
       });
     }
 
@@ -56,8 +58,8 @@ export async function GET(
         }
       }
 
-      questions = manualQs.map((q) => ({
-        number: q.number,
+      questions = manualQs.map((q, idx) => ({
+        number: idx + 1,
         text: q.text,
         options: q.options,
       }));
@@ -93,13 +95,15 @@ export async function GET(
       // Remap question numbers 1..N based on the random order
       questions = rawQuestions.map((q, idx) => ({ ...q, number: idx + 1 }));
     } else if (series.s3Key) {
-      // Regular single-PDF test series
+      // Regular single-PDF test series (Prev Year or long-form)
       const pdfBuffer = await downloadPDF(series.s3Key);
       const text = await extractText(pdfBuffer);
-      questions = parseQuestions(text, series.startQuestion || 1, series.endQuestion || 20, lang);
+      let parsed = parseQuestions(text, series.startQuestion || 1, series.endQuestion || 150, lang);
       if (lang === 'hi') {
-        questions = await cleanGarbledHindiQuestions(questions);
+        parsed = await cleanGarbledHindiQuestions(parsed);
       }
+      // Ensure sequential numbering 1..N regardless of PDF original numbering
+      questions = parsed.map((q, idx) => ({ ...q, number: idx + 1 }));
     }
 
     if (questions.length === 0) {
@@ -117,12 +121,18 @@ export async function GET(
       console.error('Failed to update cache:', err);
     });
 
+    const durationMinutes = series.isRandom
+      ? (series.durationMinutes || 80)
+      : (series.durationMinutes && series.durationMinutes <= questions.length ? series.durationMinutes : questions.length);
+
     return NextResponse.json({
       seriesId: series.id,
       seriesTitle: series.title,
       subject: series.subject,
       totalQuestions: questions.length,
       questions,
+      testType: series.testType || (series.isRandom ? 'practice' : 'prev-year'),
+      durationMinutes,
     });
   } catch (error) {
     console.error('Failed to fetch exam questions:', error);
