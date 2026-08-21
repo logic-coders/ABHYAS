@@ -6,7 +6,7 @@
  * Uses Google Gemini API (free tier) to conserve resources.
  */
 
-import { ManualQuestion, Subject } from './types';
+import { ManualQuestion, Subject, Question } from './types';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
