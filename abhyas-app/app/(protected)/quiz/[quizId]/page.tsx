@@ -490,12 +490,14 @@ export default function QuizPage() {
           align-items: center;
           justify-content: space-between;
           gap: 1rem;
+          flex-wrap: wrap;
         }
 
         .quiz-branding {
           display: flex;
           align-items: center;
           gap: 0.75rem;
+          flex-wrap: wrap;
         }
 
         .quiz-badge {
@@ -528,6 +530,7 @@ export default function QuizPage() {
           display: flex;
           align-items: center;
           gap: 0.6rem;
+          flex-wrap: wrap;
         }
 
         .quiz-mode-pill {
@@ -731,6 +734,7 @@ export default function QuizPage() {
           gap: 1rem;
           padding-top: 1rem;
           border-top: 1px solid var(--border-subtle);
+          flex-wrap: wrap;
         }
 
         .btn-skip {
@@ -755,7 +759,7 @@ export default function QuizPage() {
           transform: translateY(-1px);
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
           .quiz-top-inner {
             flex-direction: column;
             align-items: center;
