@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { getTestSeriesById } from '@/lib/metadata-store';
 import { downloadPDF } from '@/lib/s3';
-import { extractText, Language } from '@/lib/pdf-parser';
+import { extractText, Language, parseQuestions } from '@/lib/pdf-parser';
 import { Question, ManualQuestion } from '@/lib/types';
-import { translateQuestionsToHindi, extractQuestionsWithLLM } from '@/lib/gemini';
+import { translateQuestionsToHindi, extractQuestionsWithLLM, cleanGarbledHindiQuestions } from '@/lib/gemini';
 
 /**
  * GET /api/exam/[seriesId]/questions?lang=en|hi
@@ -67,7 +67,10 @@ export async function GET(
         // Find min and max for this PDF to parse efficiently
         const start = Math.min(...nums);
         const end = Math.max(...nums);
-        const parsed = await extractQuestionsWithLLM(text, start, end, lang);
+        let parsed = parseQuestions(text, start, end, lang);
+        if (lang === 'hi') {
+          parsed = await cleanGarbledHindiQuestions(parsed);
+        }
         // Filter only the randomly selected ones
         const requiredSet = new Set(nums);
         return parsed.filter(q => requiredSet.has(q.number));
@@ -82,7 +85,10 @@ export async function GET(
       // Regular single-PDF test series
       const pdfBuffer = await downloadPDF(series.s3Key);
       const text = await extractText(pdfBuffer);
-      questions = await extractQuestionsWithLLM(text, series.startQuestion || 1, series.endQuestion || 20, lang);
+      questions = parseQuestions(text, series.startQuestion || 1, series.endQuestion || 20, lang);
+      if (lang === 'hi') {
+        questions = await cleanGarbledHindiQuestions(questions);
+      }
     }
 
     if (questions.length === 0) {
