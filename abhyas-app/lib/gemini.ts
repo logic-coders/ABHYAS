@@ -127,6 +127,70 @@ ${JSON.stringify(chunk, null, 2)}`;
 }
 
 /**
+ * Extract exact questions from raw PDF text using Gemini AI.
+ * This does deep analysis to correctly identify the question numbers, text, and options,
+ * even when special characters and encoding artifacts are present (like Hindi Kruti Dev/DevLys).
+ */
+export async function extractQuestionsWithLLM(
+  text: string,
+  start: number,
+  end: number,
+  language: string
+): Promise<Question[]> {
+  try {
+    const prompt = `You are an expert data extractor and OCR text corrector for Indian competitive exams.
+I have extracted raw text from a PDF containing multiple-choice questions. 
+The text might contain garbled characters, formatting issues, or mixed English/Hindi content.
+
+Task:
+1. Extract questions numbered exactly from ${start} to ${end}.
+2. The target language for extraction is: ${language === 'hi' ? 'Hindi' : 'English'}. If the PDF is bilingual, only extract the ${language === 'hi' ? 'Hindi' : 'English'} version of the questions.
+3. Fix any garbled characters, typos, and font artifacts (e.g., legacy font encodings in Hindi) to form correct academic words.
+4. Preserve all mathematical formulas, numbers, equations, and Latin/Greek symbols exactly as they are.
+5. Identify exactly 4 options for each question, stripping out any '(A)', '(B)' prefixes from the option text itself.
+6. Do NOT include the answer key or any explanation.
+
+Return ONLY a valid JSON array of objects with this structure (no markdown, no extra text):
+[
+  {
+    "number": 1,
+    "text": "Question text...",
+    "options": ["Option 1", "Option 2", "Option 3", "Option 4"]
+  }
+]
+
+Here is the raw PDF text:
+"""
+${text}
+"""`;
+
+    // Wait, the text can be huge, but Gemini Flash has 1M context. Let's send it.
+    const rawResponse = await callGemini(prompt);
+    
+    let jsonStr = rawResponse;
+    const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+    
+    let questions = JSON.parse(jsonStr) as Question[];
+    
+    // Ensure we only return questions within start and end
+    questions = questions.filter(q => q.number >= start && q.number <= end);
+    
+    // Clean up option prefixes if LLM missed it
+    return questions.map(q => ({
+      number: q.number,
+      text: q.text,
+      options: (q.options || []).map(opt => opt.replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '').trim()),
+    }));
+  } catch (error) {
+    console.error('Failed to extract questions via LLM:', error);
+    return []; // Return empty so fallback can happen if necessary
+  }
+}
+
+/**
  * Clean up garbled Hindi text extracted from PDFs (Kruti Dev/DevLys artifacts) using Gemini AI.
  * This runs on PDF test extractions when language is Hindi.
  */

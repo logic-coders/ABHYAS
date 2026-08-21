@@ -758,18 +758,28 @@ export default function QuizPage() {
         @media (max-width: 640px) {
           .quiz-top-inner {
             flex-direction: column;
-            align-items: flex-start;
+            align-items: center;
             gap: 0.75rem;
+            text-align: center;
+          }
+          .quiz-branding {
+            flex-direction: column;
+            align-items: center;
           }
           .quiz-nav-actions {
             width: 100%;
-            justify-content: flex-end;
+            justify-content: center;
           }
           .quiz-card {
             padding: 1.5rem;
           }
           .quiz-question-text {
             font-size: 1.1rem;
+          }
+          .progress-meta {
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
           }
           .quiz-option-btn {
             padding: 0.85rem 1rem;

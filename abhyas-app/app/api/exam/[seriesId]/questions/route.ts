@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { getTestSeriesById } from '@/lib/metadata-store';
 import { downloadPDF } from '@/lib/s3';
-import { extractText, parseQuestions, Language } from '@/lib/pdf-parser';
+import { extractText, Language } from '@/lib/pdf-parser';
 import { Question, ManualQuestion } from '@/lib/types';
-import { translateQuestionsToHindi, cleanGarbledHindiQuestions } from '@/lib/gemini';
+import { translateQuestionsToHindi, extractQuestionsWithLLM } from '@/lib/gemini';
 
 /**
  * GET /api/exam/[seriesId]/questions?lang=en|hi
@@ -67,7 +67,7 @@ export async function GET(
         // Find min and max for this PDF to parse efficiently
         const start = Math.min(...nums);
         const end = Math.max(...nums);
-        const parsed = parseQuestions(text, start, end, lang);
+        const parsed = await extractQuestionsWithLLM(text, start, end, lang);
         // Filter only the randomly selected ones
         const requiredSet = new Set(nums);
         return parsed.filter(q => requiredSet.has(q.number));
@@ -82,7 +82,7 @@ export async function GET(
       // Regular single-PDF test series
       const pdfBuffer = await downloadPDF(series.s3Key);
       const text = await extractText(pdfBuffer);
-      questions = parseQuestions(text, series.startQuestion || 1, series.endQuestion || 20, lang);
+      questions = await extractQuestionsWithLLM(text, series.startQuestion || 1, series.endQuestion || 20, lang);
     }
 
     if (questions.length === 0) {
@@ -93,15 +93,6 @@ export async function GET(
         },
         { status: 422 }
       );
-    }
-
-    // Apply Gemini LLM cleanup for Hindi PDF/Random tests to perfectly fix OCR font artifacts
-    if (lang === 'hi' && !series.isManual) {
-      try {
-        questions = await cleanGarbledHindiQuestions(questions);
-      } catch (err) {
-        console.warn('Failed to clean garbled hindi text via LLM, proceeding with regex-cleaned questions:', err);
-      }
     }
 
     return NextResponse.json({
