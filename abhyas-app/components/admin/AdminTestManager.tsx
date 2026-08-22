@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TestSeries, Subject, SUBJECTS, SUBJECT_ICONS, SUBJECT_COLORS } from '@/lib/types';
+import QuestionEditorModal from './QuestionEditorModal';
 
 export default function AdminTestManager() {
   const [tests, setTests] = useState<TestSeries[]>([]);
@@ -10,6 +11,9 @@ export default function AdminTestManager() {
   const [filterType, setFilterType] = useState<'all' | 'prev-year' | 'practice'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Question editing modal state
+  const [editingQuestionsTest, setEditingQuestionsTest] = useState<TestSeries | null>(null);
 
   // Rename modal state
   const [editingTest, setEditingTest] = useState<TestSeries | null>(null);
@@ -291,6 +295,14 @@ export default function AdminTestManager() {
                     <td>
                       <div className="actions-cell">
                         <button
+                          className="btn-action btn-questions"
+                          onClick={() => setEditingQuestionsTest(test)}
+                          title="Edit Questions & Answers"
+                          type="button"
+                        >
+                          📝 Questions
+                        </button>
+                        <button
                           className="btn-action btn-rename"
                           onClick={() => handleOpenRename(test)}
                           title="Rename Test"
@@ -315,6 +327,18 @@ export default function AdminTestManager() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Question Editor Modal */}
+      {editingQuestionsTest && (
+        <QuestionEditorModal
+          test={editingQuestionsTest}
+          onClose={() => setEditingQuestionsTest(null)}
+          onSaved={() => {
+            showToast('success', `Questions updated for "${editingQuestionsTest.title}"`);
+            fetchTests();
+          }}
+        />
       )}
 
       {/* Rename Modal */}
@@ -590,6 +614,18 @@ export default function AdminTestManager() {
           cursor: pointer;
           transition: all 0.15s ease;
           border: 1px solid transparent;
+        }
+
+        .btn-questions {
+          background: rgba(168, 85, 247, 0.12);
+          color: #c084fc;
+          border-color: rgba(168, 85, 247, 0.3);
+        }
+
+        .btn-questions:hover {
+          background: rgba(168, 85, 247, 0.25);
+          color: #e9d5ff;
+          border-color: #a855f7;
         }
 
         .btn-rename {

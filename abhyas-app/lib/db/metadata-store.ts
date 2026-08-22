@@ -1,4 +1,4 @@
-import { TestSeries as TestSeriesType, ExamFormat } from '@/lib/types';
+import { TestSeries as TestSeriesType, ExamFormat, BilingualQuestion } from '@/lib/types';
 import connectToDatabase from '@/lib/db/mongoose';
 import { TestSeries } from '@/lib/models/TestSeries';
 import { UsedQuestion } from '@/lib/models/UsedQuestion';
@@ -56,6 +56,48 @@ export async function deleteTestSeries(id: string): Promise<void> {
 export async function updateTestSeriesTitle(id: string, title: string): Promise<void> {
   await connectToDatabase();
   await TestSeries.findOneAndUpdate({ id }, { $set: { title } });
+}
+
+export async function updateTestSeriesQuestions(
+  id: string,
+  bilingualQuestions: BilingualQuestion[]
+): Promise<void> {
+  await connectToDatabase();
+
+  const answersMap = new Map<string, string>();
+  bilingualQuestions.forEach((q) => {
+    if (q.correctAnswer) {
+      answersMap.set(String(q.number), q.correctAnswer.trim().toUpperCase());
+    }
+  });
+
+  const cachedEn = bilingualQuestions.map((q) => ({
+    number: q.number,
+    text: q.english.text,
+    options: q.english.options,
+  }));
+
+  const cachedHi = bilingualQuestions.map((q) => ({
+    number: q.number,
+    text: q.hindi.text,
+    options: q.hindi.options,
+  }));
+
+  const cachedQuestionsMap = new Map();
+  cachedQuestionsMap.set('en', cachedEn);
+  cachedQuestionsMap.set('hi', cachedHi);
+
+  await TestSeries.findOneAndUpdate(
+    { id },
+    {
+      $set: {
+        bilingualQuestions,
+        cachedQuestions: cachedQuestionsMap,
+        answers: answersMap,
+        endQuestion: bilingualQuestions.length,
+      },
+    }
+  );
 }
 
 export async function getUsedQuestions(subject: string): Promise<string[]> {
