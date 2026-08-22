@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getUserByEmail, updateUser } from '@/lib/user-store';
-import { hashPassword } from '@/lib/password';
+import { getUserByEmail, updateUser } from '@/lib/db/user-store';
+import { hashPassword } from '@/lib/utils/password';
 
 export async function POST(request: Request) {
   try {

@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { downloadJSON } from '@/lib/s3';
-import connectToDatabase from '@/lib/mongoose';
+import { getCurrentUser } from '@/lib/utils/auth';
+import { downloadJSON } from '@/lib/services/s3';
+import connectToDatabase from '@/lib/db/mongoose';
 import { User } from '@/lib/models/User';
 import { TestSeries } from '@/lib/models/TestSeries';
 import { Result } from '@/lib/models/Result';

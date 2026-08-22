@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Question, ExamResult } from '@/lib/types';
-import { Language } from '@/lib/pdf-parser';
-import { useTheme } from '@/lib/theme-context';
-import LanguageSelector from '@/components/LanguageSelector';
+import { Question, ExamResult, Language } from '@/lib/types';
+import { useTheme } from '@/lib/context/theme-context';
+import LanguageSelector from '@/components/exam/LanguageSelector';
 
 const QUESTION_TIME_LIMIT = 60; // 60 seconds per question
 

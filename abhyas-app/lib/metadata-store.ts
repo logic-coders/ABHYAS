@@ -23,6 +23,8 @@ function toPlainTestSeries(doc: any): TestSeriesType {
     streakDate: doc.streakDate,
     testType: doc.testType || (doc.isRandom ? 'practice' : 'prev-year'),
     durationMinutes: doc.durationMinutes,
+    bilingualQuestions: doc.bilingualQuestions || [],
+    answers: doc.answers instanceof Map ? Object.fromEntries(doc.answers) : doc.answers || {},
     cachedQuestions: doc.cachedQuestions instanceof Map 
       ? Object.fromEntries(doc.cachedQuestions) 
       : doc.cachedQuestions || {},

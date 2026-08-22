@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { SafeUser } from '@/lib/types';
-import { TestResultSummary } from '@/lib/result-store';
+import { TestResultSummary } from '@/lib/db/result-store';
 
 interface UserWithResults extends SafeUser {
   results: TestResultSummary[];

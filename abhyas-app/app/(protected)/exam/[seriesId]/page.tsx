@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Question, ExamResult } from '@/lib/types';
-import { Language } from '@/lib/pdf-parser';
-import { useTheme } from '@/lib/theme-context';
-import LanguageSelector from '@/components/LanguageSelector';
-import QuestionView from '@/components/QuestionView';
-import QuestionNavigator from '@/components/QuestionNavigator';
-import Pagination from '@/components/Pagination';
-import DisclaimerModal from '@/components/DisclaimerModal';
+import { Question, ExamResult, Language } from '@/lib/types';
+import { useTheme } from '@/lib/context/theme-context';
+import LanguageSelector from '@/components/exam/LanguageSelector';
+import QuestionView from '@/components/exam/QuestionView';
+import QuestionNavigator from '@/components/exam/QuestionNavigator';
+import Pagination from '@/components/exam/Pagination';
+import DisclaimerModal from '@/components/exam/DisclaimerModal';
 
 interface ExamData {
   seriesId: string;

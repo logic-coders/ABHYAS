@@ -1,6 +1,6 @@
-import { Subject, ExamFormat } from './types';
-import connectToDatabase from './mongoose';
-import { Result } from './models/Result';
+import { Subject, ExamFormat, ResultItem } from '@/lib/types';
+import connectToDatabase from '@/lib/mongoose';
+import { Result } from '@/lib/models/Result';
 
 export interface TestResultSummary {
   id: string;
@@ -16,7 +16,7 @@ export interface TestResultSummary {
   percentage: number;
   format?: ExamFormat;
   date: string; // ISO string
-  breakdown?: import('./types').ResultItem[];
+  breakdown?: ResultItem[];
 }
 
 // Helper to convert Mongoose document to plain object
@@ -39,19 +39,28 @@ function toPlainResult(doc: any): TestResultSummary {
   };
 }
 
+export async function saveResult(
+  data: Omit<TestResultSummary, 'id' | 'date'>
+): Promise<TestResultSummary> {
+  await connectToDatabase();
+  const doc = await Result.create({
+    ...data,
+    id: crypto.randomUUID(),
+    date: new Date().toISOString(),
+  });
+  return toPlainResult(doc);
+}
+
+export const addResult = saveResult;
+
 export async function getAllResults(): Promise<TestResultSummary[]> {
   await connectToDatabase();
-  const results = await Result.find({}).lean();
-  return results.map(toPlainResult);
+  const docs = await Result.find({}).sort({ createdAt: -1 }).lean();
+  return docs.map(toPlainResult);
 }
 
 export async function getResultsByUser(userId: string): Promise<TestResultSummary[]> {
   await connectToDatabase();
-  const results = await Result.find({ userId }).sort({ date: -1 }).lean();
-  return results.map(toPlainResult);
-}
-
-export async function addResult(result: TestResultSummary): Promise<void> {
-  await connectToDatabase();
-  await Result.create(result);
+  const docs = await Result.find({ userId }).sort({ createdAt: -1 }).lean();
+  return docs.map(toPlainResult);
 }

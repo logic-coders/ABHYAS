@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { addTestSeries } from '@/lib/metadata-store';
-import { getUser } from '@/lib/auth';
+import { addTestSeries } from '@/lib/db/metadata-store';
+import { getUser } from '@/lib/utils/auth';
 import { ManualQuestion, Subject, SUBJECTS } from '@/lib/types';
 
 /**

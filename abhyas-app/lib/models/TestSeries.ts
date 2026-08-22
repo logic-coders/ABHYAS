@@ -7,6 +7,21 @@ const ManualQuestionSchema = new mongoose.Schema({
   correctAnswer: { type: String, required: true },
 }, { _id: false });
 
+const BilingualQuestionSchema = new mongoose.Schema({
+  number: { type: Number, required: true },
+  english: {
+    text: { type: String, required: true },
+    options: [{ type: String }],
+  },
+  hindi: {
+    text: { type: String, required: true },
+    options: [{ type: String }],
+  },
+  correctAnswer: { type: String },
+  status: { type: String },
+  issues: [{ type: String }],
+}, { _id: false });
+
 const TestSeriesSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   title: { type: String, required: true },
@@ -22,6 +37,8 @@ const TestSeriesSchema = new mongoose.Schema({
   durationPerQuestion: { type: Number, default: 30 },
   isManual: { type: Boolean, default: false },
   manualQuestions: [ManualQuestionSchema],
+  bilingualQuestions: [BilingualQuestionSchema],
+  answers: { type: Map, of: String },
   isDailyStreak: { type: Boolean, default: false },
   streakDate: { type: String },
   testType: { type: String, default: 'prev-year' },

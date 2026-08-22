@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getTestSeriesById } from '@/lib/metadata-store';
-import { downloadPDF } from '@/lib/s3';
-import { extractText, parseQuestions, parseAnswers, Language } from '@/lib/pdf-parser';
+import { getTestSeriesById } from '@/lib/db/metadata-store';
+import { downloadPDF } from '@/lib/services/s3';
+import { extractText, parseQuestions, parseAnswers, Language } from '@/lib/parsers/pdf-parser';
 import { ExamAnswer, ExamResult, ResultItem, Question } from '@/lib/types';
-import { addResult } from '@/lib/result-store';
-import { getCurrentUser } from '@/lib/auth';
+import { addResult } from '@/lib/db/result-store';
+import { getCurrentUser } from '@/lib/utils/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
 
 /**
  * POST /api/exam/[seriesId]/submit
- * Receives the user's answers, re-parses the PDF for correct answers,
- * and returns a scored result.
+ * Receives the user's answers, scores them against the correct answer map,
+ * and returns the scored result with detailed breakdown.
  *
  * Body: { answers: ExamAnswer[], lang?: 'en' | 'hi' }
  */
@@ -41,84 +41,157 @@ export async function POST(
       );
     }
 
-    // Parse correct answers and questions
-    let correctAnswers = new Map<number, string>();
+    // 1. Resolve Questions & Correct Answers across all test types
     let questions: Question[] = [];
+    const correctAnswers = new Map<number, string>();
 
-    if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
-      questions = series.manualQuestions.map((q) => ({
-        number: q.number,
-        text: q.text,
-        options: q.options,
+    // Case A: Bilingual Questions (Imported via TXT)
+    if (series.bilingualQuestions && series.bilingualQuestions.length > 0) {
+      questions = series.bilingualQuestions.map((q, idx) => ({
+        number: idx + 1,
+        text: lang === 'hi' ? q.hindi.text : q.english.text,
+        options: lang === 'hi' ? q.hindi.options : q.english.options,
       }));
-      for (const q of series.manualQuestions) {
-        correctAnswers.set(q.number, (q.correctAnswer || '').toUpperCase());
-      }
-    } else if (series.isRandom && series.randomQuestions) {
-      const groupedByS3Key = new Map<string, number[]>();
-      for (const rq of series.randomQuestions) {
-        if (!groupedByS3Key.has(rq.s3Key)) {
-          groupedByS3Key.set(rq.s3Key, []);
+
+      series.bilingualQuestions.forEach((q, idx) => {
+        const ans = q.correctAnswer || (series.answers && ((series.answers as any)[idx + 1] || (series.answers as any)[String(idx + 1)]));
+        if (ans) {
+          correctAnswers.set(idx + 1, String(ans).trim().toUpperCase());
         }
-        groupedByS3Key.get(rq.s3Key)!.push(rq.number);
+      });
+    }
+    // Case B: Manual Questions (Speed Quiz, Daily Streak Quiz, Manual Entry)
+    else if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
+      if (series.cachedQuestions && series.cachedQuestions[lang] && series.cachedQuestions[lang].length > 0) {
+        questions = series.cachedQuestions[lang];
+      } else {
+        questions = series.manualQuestions.map((q, idx) => ({
+          number: idx + 1,
+          text: q.text,
+          options: q.options,
+        }));
       }
 
-      const fetchPromises = Array.from(groupedByS3Key.entries()).map(async ([s3Key, nums]) => {
-        const pdfBuffer = await downloadPDF(s3Key);
-        const text = await extractText(pdfBuffer);
-        const start = Math.min(...nums);
-        const end = Math.max(...nums);
-        const parsed = parseQuestions(text, start, end, lang);
-        const parsedAns = parseAnswers(text, start, end);
-        const requiredSet = new Set(nums);
-        
-        return {
-          questions: parsed.filter(q => requiredSet.has(q.number)),
-          answers: parsedAns
-        };
+      series.manualQuestions.forEach((q, idx) => {
+        const ans = q.correctAnswer || (series.answers && ((series.answers as any)[idx + 1] || (series.answers as any)[String(idx + 1)]));
+        if (ans) {
+          correctAnswers.set(idx + 1, String(ans).trim().toUpperCase());
+        }
       });
-
-      const resultsArray = await Promise.all(fetchPromises);
-      const rawQuestions = resultsArray.flatMap(r => r.questions);
-      
-      // Remap question numbers 1..N based on the random order
-      questions = rawQuestions.map((q, idx) => ({ ...q, number: idx + 1 }));
-      
-      // Remap correct answers to the new 1..N indices
-      rawQuestions.forEach((q, idx) => {
-        // Find which PDF's answer map this belonged to
-        const parentResult = resultsArray.find(r => r.questions.includes(q));
-        if (parentResult) {
-          const ans = parentResult.answers.get(q.number);
-          if (ans) {
-            correctAnswers.set(idx + 1, ans);
+    }
+    // Case C: Random Practice / Quiz from PDF Pool
+    else if (series.isRandom && series.randomQuestions && series.randomQuestions.length > 0) {
+      if (series.answers && Object.keys(series.answers).length > 0) {
+        for (const [k, v] of Object.entries(series.answers)) {
+          const qNum = Number(k);
+          if (!isNaN(qNum) && v) {
+            correctAnswers.set(qNum, String(v).trim().toUpperCase());
           }
         }
-      });
+      }
 
-    } else if (series.s3Key) {
-      // Download single PDF from S3
-      const pdfBuffer = await downloadPDF(series.s3Key);
-      const text = await extractText(pdfBuffer);
-      const startQ = series.startQuestion || 1;
-      const endQ = series.endQuestion || 150;
-      const rawAnswers = parseAnswers(text, startQ, endQ);
-      const rawQuestions = parseQuestions(text, startQ, endQ, lang);
-
-      // Renumber questions 1..N and map correct answers to 1..N
-      questions = rawQuestions.map((q, idx) => ({ ...q, number: idx + 1 }));
-      rawQuestions.forEach((q, idx) => {
-        const ans = rawAnswers.get(q.number);
-        if (ans) {
-          correctAnswers.set(idx + 1, ans);
+      if (
+        series.cachedQuestions &&
+        series.cachedQuestions[lang] &&
+        series.cachedQuestions[lang].length > 0 &&
+        correctAnswers.size === series.randomQuestions.length
+      ) {
+        questions = series.cachedQuestions[lang];
+      } else {
+        // Download and parse questions and answers from PDFs
+        const groupedByS3Key = new Map<string, number[]>();
+        for (const rq of series.randomQuestions) {
+          if (!groupedByS3Key.has(rq.s3Key)) {
+            groupedByS3Key.set(rq.s3Key, []);
+          }
+          groupedByS3Key.get(rq.s3Key)!.push(rq.number);
         }
-      });
+
+        const fetchPromises = Array.from(groupedByS3Key.entries()).map(async ([s3Key, nums]) => {
+          const pdfBuffer = await downloadPDF(s3Key);
+          const text = await extractText(pdfBuffer);
+          const start = Math.min(...nums);
+          const end = Math.max(...nums);
+          const parsed = parseQuestions(text, start, end, lang);
+          const parsedAns = parseAnswers(text, start, end);
+          const requiredSet = new Set(nums);
+
+          return {
+            questions: parsed.filter((q) => requiredSet.has(q.number)),
+            answers: parsedAns,
+          };
+        });
+
+        const resultsArray = await Promise.all(fetchPromises);
+        const rawQuestions = resultsArray.flatMap((r) => r.questions);
+
+        questions = rawQuestions.map((q, idx) => ({ ...q, number: idx + 1 }));
+
+        rawQuestions.forEach((q, idx) => {
+          const parentResult = resultsArray.find((r) => r.questions.includes(q));
+          if (parentResult) {
+            const ans = parentResult.answers.get(q.number);
+            if (ans) {
+              correctAnswers.set(idx + 1, String(ans).trim().toUpperCase());
+            }
+          }
+        });
+      }
+    }
+    // Case D: Single PDF Test Series
+    else if (series.s3Key) {
+      if (
+        series.cachedQuestions &&
+        series.cachedQuestions[lang] &&
+        series.cachedQuestions[lang].length > 0 &&
+        series.answers &&
+        Object.keys(series.answers).length > 0
+      ) {
+        questions = series.cachedQuestions[lang];
+        for (const [k, v] of Object.entries(series.answers)) {
+          const qNum = Number(k);
+          if (!isNaN(qNum) && v) {
+            correctAnswers.set(qNum, String(v).trim().toUpperCase());
+          }
+        }
+      } else {
+        const pdfBuffer = await downloadPDF(series.s3Key);
+        const text = await extractText(pdfBuffer);
+        const startQ = series.startQuestion || 1;
+        const endQ = series.endQuestion || 150;
+        const rawAnswers = parseAnswers(text, startQ, endQ);
+        const rawQuestions = parseQuestions(text, startQ, endQ, lang);
+
+        questions = rawQuestions.map((q, idx) => ({ ...q, number: idx + 1 }));
+        rawQuestions.forEach((q, idx) => {
+          const ans = rawAnswers.get(q.number);
+          if (ans) {
+            correctAnswers.set(idx + 1, String(ans).trim().toUpperCase());
+          }
+        });
+      }
+    }
+    // Case E: Fallback to cachedQuestions and series.answers
+    else if (series.cachedQuestions && series.cachedQuestions[lang]) {
+      questions = series.cachedQuestions[lang];
+    }
+
+    // Merge any global answers from series.answers if not yet present
+    if (series.answers) {
+      for (const [k, v] of Object.entries(series.answers)) {
+        const qNum = Number(k);
+        if (!isNaN(qNum) && v && !correctAnswers.has(qNum)) {
+          correctAnswers.set(qNum, String(v).trim().toUpperCase());
+        }
+      }
     }
 
     // Build a lookup for user answers
     const userAnswerMap = new Map<number, string>();
     for (const ans of userAnswers) {
-      userAnswerMap.set(ans.questionNumber, ans.selectedOption.toUpperCase());
+      if (ans.selectedOption) {
+        userAnswerMap.set(ans.questionNumber, String(ans.selectedOption).trim().toUpperCase());
+      }
     }
 
     // Score each question
@@ -127,12 +200,14 @@ export async function POST(
     let unanswered = 0;
     const breakdown: ResultItem[] = [];
 
-    for (const q of questions) {
-      const correctAns = correctAnswers.get(q.number) ?? '?';
-      const userAns = userAnswerMap.get(q.number) ?? '';
-      const isCorrect = userAns !== '' && userAns === correctAns;
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      const qNum = q.number || i + 1;
+      const correctAns = correctAnswers.get(qNum) ?? '?';
+      const userAns = userAnswerMap.get(qNum) ?? '';
+      const isCorrect = userAns !== '' && userAns !== '—' && userAns === correctAns;
 
-      if (userAns === '') {
+      if (!userAns || userAns === '—') {
         unanswered++;
       } else if (isCorrect) {
         correct++;
@@ -141,7 +216,7 @@ export async function POST(
       }
 
       breakdown.push({
-        questionNumber: q.number,
+        questionNumber: qNum,
         questionText: q.text,
         options: q.options,
         userAnswer: userAns || '—',
@@ -152,7 +227,6 @@ export async function POST(
 
     const totalQuestions = questions.length;
     const percentage = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0;
-
     const format = series.format || (series.isQuiz ? 'quiz' : 'test');
 
     const result: ExamResult = {
@@ -188,10 +262,16 @@ export async function POST(
         breakdown,
       });
 
+      // Keep only latest 5 test history records for admin accounts
+      if (user.role === 'admin') {
+        const { trimAdminResultsToLatestN } = await import('@/lib/db/result-store');
+        await trimAdminResultsToLatestN(user.id, 5);
+      }
+
       // If this was a daily streak quiz, update user's streak
       if (series.isDailyStreak) {
-        const { getUserById, updateUser } = await import('@/lib/user-store');
-        const { getTodayDateIST, getYesterdayDateIST } = require('@/lib/date-utils');
+        const { getUserById, updateUser } = await import('@/lib/db/user-store');
+        const { getTodayDateIST, getYesterdayDateIST } = require('@/lib/utils/date-utils');
         const todayStr = getTodayDateIST();
         const yesterdayStr = getYesterdayDateIST();
 
@@ -227,9 +307,9 @@ export async function POST(
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Failed to submit exam:', error);
+    console.error('Error submitting exam:', error);
     return NextResponse.json(
-      { error: 'Failed to score exam' },
+      { error: error instanceof Error ? error.message : 'Internal server error while processing exam' },
       { status: 500 }
     );
   }

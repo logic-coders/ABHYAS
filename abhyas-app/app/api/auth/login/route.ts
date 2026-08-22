@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getUserByEmail, updateUserStatus } from '@/lib/user-store';
-import { createToken, setAuthCookie, toSafeUser, isAdminEmail } from '@/lib/auth';
-import { verifyPassword } from '@/lib/password';
+import { getUserByEmail, updateUserStatus } from '@/lib/db/user-store';
+import { createToken, setAuthCookie, toSafeUser, isAdminEmail } from '@/lib/utils/auth';
+import { verifyPassword } from '@/lib/utils/password';
+import { clearAdminResultsOlderThanToday } from '@/lib/db/result-store';
 
 /**
  * POST /api/auth/login
  * Authenticates a user with email + password.
  * Returns SafeUser + sets HttpOnly JWT cookie.
+ * Automatically clears previous days' test history for admin users.
  */
 export async function POST(request: Request) {
   try {
@@ -39,11 +41,16 @@ export async function POST(request: Request) {
     }
 
     // Admin emails are automatically APPROVED and assigned admin role
-    const isAdmin = isAdminEmail(user.email);
-    if (isAdmin && user.accountStatus !== 'APPROVED') {
-      await updateUserStatus(user.id, 'APPROVED');
-      user.accountStatus = 'APPROVED';
-      user.role = 'admin';
+    const isAdmin = isAdminEmail(user.email) || user.role === 'admin';
+    if (isAdmin) {
+      if (user.accountStatus !== 'APPROVED' || user.role !== 'admin') {
+        await updateUserStatus(user.id, 'APPROVED');
+        user.accountStatus = 'APPROVED';
+        user.role = 'admin';
+      }
+
+      // Automatically clear admin test history from prior days upon daily login
+      await clearAdminResultsOlderThanToday(user.id);
     }
 
     // Check account status for normal users

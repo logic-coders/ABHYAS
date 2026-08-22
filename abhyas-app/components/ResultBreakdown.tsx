@@ -14,15 +14,22 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
     setExpandedIndex(expandedIndex === idx ? null : idx);
   };
 
+  const getOptionLetter = (optionText: string, index: number): string => {
+    const match = optionText.match(/^[(\s]*([A-Ja-j])[).:\s]/);
+    if (match) return match[1].toUpperCase();
+    const fallbackLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    return fallbackLetters[index] || String.fromCharCode(65 + index);
+  };
+
   return (
     <div className="breakdown-list">
       {breakdown.map((item, idx) => {
         const isExpanded = expandedIndex === idx;
-        const wasUnanswered = item.userAnswer === '—';
+        const wasUnanswered = item.userAnswer === '—' || !item.userAnswer;
 
         return (
           <div
-            key={item.questionNumber}
+            key={item.questionNumber || idx}
             className={`breakdown-item ${
               item.isCorrect
                 ? 'item-correct'
@@ -30,7 +37,7 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
                   ? 'item-unanswered'
                   : 'item-incorrect'
             }`}
-            style={{ animationDelay: `${idx * 0.04}s` }}
+            style={{ animationDelay: `${idx * 0.03}s` }}
           >
             {/* Summary row (always visible) */}
             <button
@@ -70,9 +77,10 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
                 <p className="detail-question">{item.questionText}</p>
                 <div className="detail-options">
                   {item.options.map((opt, oidx) => {
-                    const optLetter = opt.match(/^[(\s]*([A-Ja-j])[).:\s]/)?.[1]?.toUpperCase() || '';
-                    const isUserChoice = optLetter === item.userAnswer;
-                    const isCorrectChoice = optLetter === item.correctAnswer;
+                    const optLetter = getOptionLetter(opt, oidx);
+                    const isUserChoice = !wasUnanswered && item.userAnswer && optLetter === item.userAnswer.toUpperCase();
+                    const isCorrectChoice = Boolean(item.correctAnswer && optLetter === item.correctAnswer.toUpperCase());
+                    const cleanOptionText = opt.replace(/^[(\s]*[A-Ja-j][).:\s]+\s*/, '');
 
                     return (
                       <div
@@ -81,10 +89,13 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
                           isUserChoice && !item.isCorrect ? 'opt-wrong' : ''
                         }`}
                       >
-                        {opt}
-                        {isCorrectChoice && <span className="opt-tag correct-tag">✓ Correct</span>}
+                        <span className={`option-letter-badge ${isCorrectChoice ? 'badge-correct-letter' : isUserChoice ? 'badge-wrong-letter' : ''}`}>
+                          ({optLetter})
+                        </span>
+                        <span className="option-text-content">{cleanOptionText}</span>
+                        {isCorrectChoice && <span className="opt-tag correct-tag">✓ Correct Answer</span>}
                         {isUserChoice && !item.isCorrect && (
-                          <span className="opt-tag wrong-tag">✗ Your answer</span>
+                          <span className="opt-tag wrong-tag">✗ Your Choice</span>
                         )}
                       </div>
                     );
@@ -210,6 +221,7 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
           line-height: 1.6;
           color: var(--text-primary);
           margin-bottom: 1rem;
+          font-weight: 600;
         }
 
         .detail-options {
@@ -222,38 +234,68 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
           display: flex;
           align-items: center;
           gap: 0.75rem;
-          padding: 0.6rem 0.85rem;
-          font-size: 0.88rem;
-          color: var(--text-secondary);
-          border-radius: var(--radius-sm);
+          padding: 0.75rem 1rem;
+          font-size: 0.92rem;
+          color: var(--text-primary);
+          border-radius: var(--radius-md);
           background: var(--bg-glass);
-          border: 1px solid var(--border-subtle);
+          border: 1.5px solid var(--border-subtle);
+          transition: all 0.2s ease;
         }
 
         .opt-correct {
-          background: var(--color-correct-bg);
-          border-color: rgba(34, 197, 94, 0.3);
-          color: var(--text-primary);
+          background: rgba(34, 197, 94, 0.12) !important;
+          border-color: #22c55e !important;
+          color: var(--text-primary) !important;
+          box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
         }
 
         .opt-wrong {
-          background: var(--color-incorrect-bg);
-          border-color: rgba(239, 68, 68, 0.3);
-          color: var(--text-primary);
+          background: rgba(239, 68, 68, 0.12) !important;
+          border-color: #ef4444 !important;
+          color: var(--text-primary) !important;
+          box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25);
+        }
+
+        .option-letter-badge {
+          font-size: 0.9rem;
+          font-weight: 800;
+          color: var(--text-muted);
+          flex-shrink: 0;
+        }
+
+        .badge-correct-letter {
+          color: #22c55e;
+        }
+
+        .badge-wrong-letter {
+          color: #ef4444;
+        }
+
+        .option-text-content {
+          flex: 1;
+          line-height: 1.5;
         }
 
         .opt-tag {
           margin-left: auto;
-          font-size: 0.75rem;
-          font-weight: 700;
+          font-size: 0.78rem;
+          font-weight: 800;
+          padding: 0.2rem 0.55rem;
+          border-radius: var(--radius-sm);
           flex-shrink: 0;
         }
 
         .correct-tag {
-          color: var(--color-correct);
+          color: #22c55e;
+          background: rgba(34, 197, 94, 0.15);
+          border: 1px solid rgba(34, 197, 94, 0.3);
         }
+
         .wrong-tag {
-          color: var(--color-incorrect);
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.15);
+          border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
         @media (max-width: 640px) {

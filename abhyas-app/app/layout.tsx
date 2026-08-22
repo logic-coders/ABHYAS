@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { AuthProvider } from '@/lib/auth-context';
-import { ThemeProvider } from '@/lib/theme-context';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import { AuthProvider } from '@/lib/context/auth-context';
+import { ThemeProvider } from '@/lib/context/theme-context';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
 };
 
-import MobileBottomNav from '@/components/MobileBottomNav';
+import MobileBottomNav from '@/components/layout/MobileBottomNav';
 
 const themeScript = `
   (function() {

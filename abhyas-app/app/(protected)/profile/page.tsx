@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { verifyToken, COOKIE_NAME } from '@/lib/auth';
-import { getUserById } from '@/lib/user-store';
-import ProfileView from '@/components/ProfileView';
+import { verifyToken, COOKIE_NAME } from '@/lib/utils/auth';
+import { getUserById } from '@/lib/db/user-store';
+import ProfileView from '@/components/profile/ProfileView';
 
 export default async function ProfilePage() {
   const cookieStore = await cookies();

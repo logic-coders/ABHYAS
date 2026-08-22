@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { addUser } from '@/lib/user-store';
-import { createToken, setAuthCookie, toSafeUser, isAdminEmail } from '@/lib/auth';
-import { hashPassword } from '@/lib/password';
+import { addUser } from '@/lib/db/user-store';
+import { createToken, setAuthCookie, toSafeUser, isAdminEmail } from '@/lib/utils/auth';
+import { hashPassword } from '@/lib/utils/password';
 import { User } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 

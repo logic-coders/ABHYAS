@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ExamResult, SUBJECT_ICONS } from '@/lib/types';
-import ResultBreakdown from '@/components/ResultBreakdown';
+import ResultBreakdown from '@/components/results/ResultBreakdown';
 
 export default function ResultPage() {
   const router = useRouter();

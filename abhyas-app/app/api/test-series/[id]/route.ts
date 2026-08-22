@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateTestSeriesTitle, deleteTestSeries, getTestSeriesById } from '@/lib/metadata-store';
-import { getUser } from '@/lib/auth';
+import { updateTestSeriesTitle, deleteTestSeries, getTestSeriesById } from '@/lib/db/metadata-store';
+import { getUser } from '@/lib/utils/auth';
 
 /**
  * PATCH /api/test-series/[id]

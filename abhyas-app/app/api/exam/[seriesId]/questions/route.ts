@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-import { getTestSeriesById, updateTestSeriesCache } from '@/lib/metadata-store';
-import { downloadPDF } from '@/lib/s3';
-import { extractText, Language, parseQuestions } from '@/lib/pdf-parser';
+import { getTestSeriesById, updateTestSeriesCache } from '@/lib/db/metadata-store';
+import { downloadPDF } from '@/lib/services/s3';
+import { extractText, Language, parseQuestions } from '@/lib/parsers/pdf-parser';
 import { Question, ManualQuestion } from '@/lib/types';
-import { translateQuestionsToHindi, extractQuestionsWithLLM, cleanGarbledHindiQuestions } from '@/lib/gemini';
+import { translateQuestionsToHindi, extractQuestionsWithLLM, cleanGarbledHindiQuestions } from '@/lib/services/gemini';
 
 /**
  * GET /api/exam/[seriesId]/questions?lang=en|hi
@@ -46,7 +46,13 @@ export async function GET(
 
     let questions: Question[] = [];
 
-    if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
+    if (series.bilingualQuestions && series.bilingualQuestions.length > 0) {
+      questions = series.bilingualQuestions.map((q, idx) => ({
+        number: idx + 1,
+        text: lang === 'hi' ? q.hindi.text : q.english.text,
+        options: lang === 'hi' ? q.hindi.options : q.english.options,
+      }));
+    } else if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
       // Manual entry quiz — translate to Hindi if requested
       let manualQs: ManualQuestion[] = series.manualQuestions;
 

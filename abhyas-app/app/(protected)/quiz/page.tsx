@@ -4,8 +4,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Subject, TestSeries } from '@/lib/types';
-import MiniStreakCalendar from '@/components/MiniStreakCalendar';
-import SubjectFilter from '@/components/SubjectFilter';
+import MiniStreakCalendar from '@/components/streak/MiniStreakCalendar';
+import SubjectFilter from '@/components/exam/SubjectFilter';
 
 function QuizDashboardContent() {
   const router = useRouter();

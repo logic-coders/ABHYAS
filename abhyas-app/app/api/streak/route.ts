@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getTodayDateIST } from '@/lib/date-utils';
+import { getTodayDateIST } from '@/lib/utils/date-utils';
 import { v4 as uuidv4 } from 'uuid';
-import { getUser } from '@/lib/auth';
-import { getUserById } from '@/lib/user-store';
+import { getUser } from '@/lib/utils/auth';
+import { getUserById } from '@/lib/db/user-store';
 import { SUBJECTS, Subject } from '@/lib/types';
-import { CURATED_STREAK_QUESTIONS } from '@/lib/streak-pool';
-import { generateStreakQuestions } from '@/lib/gemini';
-import connectToDatabase from '@/lib/mongoose';
+import { CURATED_STREAK_QUESTIONS } from '@/lib/services/streak-pool';
+import { generateStreakQuestions } from '@/lib/services/gemini';
+import connectToDatabase from '@/lib/db/mongoose';
 import { TestSeries } from '@/lib/models/TestSeries';
 
 export const dynamic = 'force-dynamic';

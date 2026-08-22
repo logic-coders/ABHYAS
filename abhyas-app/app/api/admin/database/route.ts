@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getAllUsers } from '@/lib/user-store';
-import { getAllResults } from '@/lib/result-store';
-import { getCurrentUser, toSafeUser } from '@/lib/auth';
+import { getAllUsers } from '@/lib/db/user-store';
+import { getAllResults } from '@/lib/db/result-store';
+import { getCurrentUser, toSafeUser } from '@/lib/utils/auth';
 
 export const dynamic = 'force-dynamic';
 

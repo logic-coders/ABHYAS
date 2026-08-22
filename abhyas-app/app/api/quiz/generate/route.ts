@@ -1,8 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getAllTestSeries, addTestSeries, getUsedQuestions, markQuestionsAsUsed, clearUsedQuestions } from '@/lib/metadata-store';
-import { Subject, TestSeries } from '@/lib/types';
+import { getAllTestSeries, addTestSeries } from '@/lib/db/metadata-store';
+import { Subject, TestSeries, BilingualQuestion } from '@/lib/types';
+import { CURATED_STREAK_QUESTIONS } from '@/lib/services/streak-pool';
+import { generateStreakQuestions } from '@/lib/services/gemini';
 import { v4 as uuidv4 } from 'uuid';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/utils/auth';
 
 const QUESTIONS_PER_QUIZ = 20;
 const DURATION_PER_QUESTION = 30; // seconds
@@ -19,52 +21,133 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Subject is required' }, { status: 400 });
     }
 
-    // 1. Gather all question pools for this subject from original PDFs
+    // 1. Gather all bilingual question pools for this subject from MongoDB
     const allSeries = await getAllTestSeries();
-    const subjectSeries = allSeries.filter((s) => s.subject === subject && !s.isRandom && !s.isQuiz);
+    const subjectSeries = allSeries.filter((s) => s.subject === subject);
 
-    let fullPool: { s3Key: string; number: number }[] = [];
-    for (const series of subjectSeries) {
-      if (series.s3Key && typeof series.startQuestion === 'number' && typeof series.endQuestion === 'number') {
-        for (let i = series.startQuestion; i <= series.endQuestion; i++) {
-          fullPool.push({ s3Key: series.s3Key, number: i });
+    const questionPool: BilingualQuestion[] = [];
+    const seenTexts = new Set<string>();
+
+    for (const s of subjectSeries) {
+      if (s.bilingualQuestions && s.bilingualQuestions.length > 0) {
+        for (const q of s.bilingualQuestions) {
+          const key = (q.english.text || q.hindi.text || '').trim().toLowerCase();
+          if (key && !seenTexts.has(key)) {
+            seenTexts.add(key);
+            questionPool.push(q);
+          }
+        }
+      } else if (s.manualQuestions && s.manualQuestions.length > 0) {
+        for (const mq of s.manualQuestions) {
+          const key = (mq.text || '').trim().toLowerCase();
+          if (key && !seenTexts.has(key)) {
+            seenTexts.add(key);
+            questionPool.push({
+              number: mq.number,
+              english: { text: mq.text, options: mq.options },
+              hindi: { text: mq.text, options: mq.options },
+              correctAnswer: mq.correctAnswer,
+              status: 'verified',
+            });
+          }
         }
       }
     }
 
-    if (fullPool.length === 0) {
+    // Include curated questions if needed
+    const curated = CURATED_STREAK_QUESTIONS[subject as Subject];
+    if (curated && curated.length > 0) {
+      for (const cq of curated) {
+        const key = (cq.text || '').trim().toLowerCase();
+        if (key && !seenTexts.has(key)) {
+          seenTexts.add(key);
+          questionPool.push({
+            number: cq.number,
+            english: { text: cq.text, options: cq.options },
+            hindi: { text: cq.text, options: cq.options },
+            correctAnswer: cq.correctAnswer,
+            status: 'verified',
+          });
+        }
+      }
+    }
+
+    // If pool has fewer than needed, generate with Gemini AI
+    if (questionPool.length < QUESTIONS_PER_QUIZ) {
+      try {
+        const aiGenerated = await generateStreakQuestions(subject as Subject);
+        for (const gq of aiGenerated) {
+          const key = (gq.text || '').trim().toLowerCase();
+          if (key && !seenTexts.has(key)) {
+            seenTexts.add(key);
+            questionPool.push({
+              number: gq.number,
+              english: { text: gq.text, options: gq.options },
+              hindi: { text: gq.text, options: gq.options },
+              correctAnswer: gq.correctAnswer,
+              status: 'verified',
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('AI fallback failed for quiz generation:', err);
+      }
+    }
+
+    if (questionPool.length === 0) {
       return NextResponse.json(
-        { error: `No question papers uploaded yet for ${subject}. Please ask your admin to upload a PDF.` },
+        { error: `No questions available for ${subject}. Please upload a TXT question paper or try again.` },
         { status: 400 }
       );
     }
 
-    // 2. Filter out already used quiz questions for this subject
-    const quizSubjectKey = `quiz_${subject}`;
-    let usedIds = await getUsedQuestions(quizSubjectKey);
-    const usedSet = new Set(usedIds);
-    let availablePool = fullPool.filter((q) => !usedSet.has(`${q.s3Key}:${q.number}`));
-
-    // 3. Reset pool if remaining questions are fewer than needed
-    if (availablePool.length < QUESTIONS_PER_QUIZ) {
-      await clearUsedQuestions(quizSubjectKey);
-      availablePool = [...fullPool];
-      usedSet.clear();
-    }
-
-    // 4. Shuffle and select 20 questions
-    for (let i = availablePool.length - 1; i > 0; i--) {
+    // 2. Shuffle and pick 20
+    const shuffled = [...questionPool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [availablePool[i], availablePool[j]] = [availablePool[j], availablePool[i]];
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
 
-    const countToTake = Math.min(QUESTIONS_PER_QUIZ, availablePool.length);
-    const selectedQuestions = availablePool.slice(0, countToTake);
+    const countToTake = Math.min(QUESTIONS_PER_QUIZ, shuffled.length);
+    const selected = shuffled.slice(0, countToTake);
 
-    // 5. Mark as used for quizzes
-    await markQuestionsAsUsed(quizSubjectKey, selectedQuestions);
+    const finalBilingualQuestions: BilingualQuestion[] = selected.map((q, idx) => ({
+      number: idx + 1,
+      english: {
+        text: q.english?.text || q.hindi?.text || '',
+        options: q.english?.options || q.hindi?.options || [],
+      },
+      hindi: {
+        text: q.hindi?.text || q.english?.text || '',
+        options: q.hindi?.options || q.english?.options || [],
+      },
+      correctAnswer: q.correctAnswer || 'A',
+      status: 'verified',
+    }));
 
-    // 6. Create Quiz Series entity
+    const answersMap: Record<string, string> = {};
+    finalBilingualQuestions.forEach((q) => {
+      if (q.correctAnswer) {
+        answersMap[String(q.number)] = q.correctAnswer;
+      }
+    });
+
+    const cachedEn = finalBilingualQuestions.map((q) => ({
+      number: q.number,
+      text: q.english.text,
+      options: q.english.options,
+    }));
+
+    const cachedHi = finalBilingualQuestions.map((q) => ({
+      number: q.number,
+      text: q.hindi.text,
+      options: q.hindi.options,
+    }));
+
+    const cachedQuestionsMap = new Map();
+    cachedQuestionsMap.set('en', cachedEn);
+    cachedQuestionsMap.set('hi', cachedHi);
+
     const allQuizzesForSubject = allSeries.filter((s) => s.subject === subject && (s.isQuiz || s.format === 'quiz')).length + 1;
 
     const quizEntry: TestSeries = {
@@ -73,13 +156,15 @@ export async function POST(request: NextRequest) {
       subject: subject as Subject,
       s3Key: '',
       startQuestion: 1,
-      endQuestion: selectedQuestions.length,
+      endQuestion: finalBilingualQuestions.length,
       createdAt: new Date().toISOString(),
       isRandom: true,
       isQuiz: true,
       format: 'quiz',
       durationPerQuestion: DURATION_PER_QUESTION,
-      randomQuestions: selectedQuestions,
+      bilingualQuestions: finalBilingualQuestions,
+      cachedQuestions: cachedQuestionsMap as any,
+      answers: answersMap as any,
     };
 
     await addTestSeries(quizEntry);

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getUser } from '@/lib/auth';
+import { getUser } from '@/lib/utils/auth';
 
 export default async function PublicLayout({
   children,

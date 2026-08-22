@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getUserByEmail, updateUser } from '@/lib/user-store';
+import { getUserByEmail, updateUser } from '@/lib/db/user-store';
 import { Resend } from 'resend';
 
 // Initialize Resend conditionally

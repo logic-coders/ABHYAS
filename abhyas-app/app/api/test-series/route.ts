@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllTestSeries, addTestSeries } from '@/lib/metadata-store';
+import { getAllTestSeries, addTestSeries } from '@/lib/db/metadata-store';
 import { TestSeries, Subject, SUBJECTS } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import { getUser } from '@/lib/auth';
+import { getUser } from '@/lib/utils/auth';
 
 /**
  * GET /api/test-series

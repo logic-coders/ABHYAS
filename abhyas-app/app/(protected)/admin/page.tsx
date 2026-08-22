@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import AdminForm from '@/components/AdminForm';
+import AdminForm from '@/components/admin/AdminForm';
 import AdminTestManager from '@/components/admin/AdminTestManager';
 import AdminQuizManager from '@/components/admin/AdminQuizManager';
 import AdminStreakManager from '@/components/admin/AdminStreakManager';
-import UserApprovals from '@/components/UserApprovals';
+import UserApprovals from '@/components/profile/UserApprovals';
 import UserDatabase from '@/components/admin/UserDatabase';
 
 export default function AdminPage() {

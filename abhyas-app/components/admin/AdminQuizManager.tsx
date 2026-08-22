@@ -2,22 +2,14 @@
 
 import { useState } from 'react';
 import { Subject, SUBJECTS, SUBJECT_ICONS, ManualQuestion } from '@/lib/types';
-import { CURATED_STREAK_QUESTIONS } from '@/lib/streak-pool';
+import { CURATED_STREAK_QUESTIONS } from '@/lib/services/streak-pool';
 
 export default function AdminQuizManager() {
-  const [method, setMethod] = useState<'random-practice' | 'manual' | 'pdf'>('random-practice');
+  const [method, setMethod] = useState<'random-practice' | 'manual'>('random-practice');
 
   // --- Random Practice Test State ---
   const [randomSubject, setRandomSubject] = useState<Subject>('Music');
   const [isGeneratingPractice, setIsGeneratingPractice] = useState(false);
-
-  // --- PDF Method State ---
-  const [pdfTitle, setPdfTitle] = useState('');
-  const [pdfSubject, setPdfSubject] = useState<Subject>('Music');
-  const [pdfStartQ, setPdfStartQ] = useState('1');
-  const [pdfEndQ, setPdfEndQ] = useState('20');
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   // --- Manual Method State ---
   const [manualTitle, setManualTitle] = useState('');
@@ -63,74 +55,6 @@ export default function AdminQuizManager() {
       showToast('error', err instanceof Error ? err.message : 'Failed to generate practice test');
     } finally {
       setIsGeneratingPractice(false);
-    }
-  };
-
-  // --- Handle PDF Submission ---
-  const handlePdfSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!pdfTitle.trim()) return showToast('error', 'Quiz title is required');
-    if (!pdfFile) return showToast('error', 'Please upload a PDF file');
-    if (!pdfStartQ || !pdfEndQ) return showToast('error', 'Question range is required');
-    if (Number(pdfStartQ) >= Number(pdfEndQ)) {
-      return showToast('error', 'Start question must be less than end question');
-    }
-
-    setIsPdfLoading(true);
-
-    try {
-      // Step 1: Upload PDF to S3
-      const formData = new FormData();
-      formData.append('file', pdfFile);
-
-      const uploadRes = await fetch('/api/upload-pdf', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json();
-        throw new Error(err.error || 'Failed to upload PDF');
-      }
-
-      const { s3Key } = await uploadRes.json();
-
-      // Step 2: Create Speed Quiz series
-      const createRes = await fetch('/api/test-series', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: pdfTitle.trim(),
-          subject: pdfSubject,
-          s3Key,
-          startQuestion: Number(pdfStartQ),
-          endQuestion: Number(pdfEndQ),
-          format: 'quiz',
-          isQuiz: true,
-          durationPerQuestion: 30,
-        }),
-      });
-
-      if (!createRes.ok) {
-        const err = await createRes.json();
-        throw new Error(err.error || 'Failed to create speed quiz');
-      }
-
-      showToast('success', `Speed Quiz "${pdfTitle}" created successfully from PDF!`);
-
-      // Reset
-      setPdfTitle('');
-      setPdfStartQ('1');
-      setPdfEndQ('20');
-      setPdfFile(null);
-      const fileInput = document.getElementById('quiz-pdf-upload') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-    } catch (err) {
-      console.error(err);
-      showToast('error', err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setIsPdfLoading(false);
     }
   };
 
@@ -280,13 +204,6 @@ export default function AdminQuizManager() {
         >
           ✍️ Manual Quiz Builder
         </button>
-        <button
-          type="button"
-          className={`method-btn ${method === 'pdf' ? 'active' : ''}`}
-          onClick={() => setMethod('pdf')}
-        >
-          📄 Upload PDF Speed Quiz
-        </button>
       </div>
 
       {/* ── METHOD 0: RANDOM PRACTICE TEST GENERATION ── */}
@@ -323,123 +240,6 @@ export default function AdminQuizManager() {
               </>
             ) : (
               'Generate & Publish Practice Test'
-            )}
-          </button>
-        </form>
-      )}
-
-      {/* ── METHOD 1: PDF UPLOAD ── */}
-      {method === 'pdf' && (
-        <form className="admin-form" onSubmit={handlePdfSubmit}>
-          <div className="form-info-box">
-            <p>
-              Upload a PDF containing questions and specify a 20-question range. The quiz will run in speed format (30 seconds per question).
-            </p>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="pdf-quiz-title" className="form-label">
-              Speed Quiz Title
-            </label>
-            <input
-              id="pdf-quiz-title"
-              className="form-input"
-              type="text"
-              placeholder="e.g., Music Fast Track — Quiz 1"
-              value={pdfTitle}
-              onChange={(e) => setPdfTitle(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="pdf-quiz-subject" className="form-label">
-              Subject
-            </label>
-            <select
-              id="pdf-quiz-subject"
-              className="form-select"
-              value={pdfSubject}
-              onChange={(e) => setPdfSubject(e.target.value as Subject)}
-            >
-              {SUBJECTS.map((s) => (
-                <option key={s} value={s}>
-                  {SUBJECT_ICONS[s]} {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Upload PDF</label>
-            <div className="file-input-wrapper">
-              <input
-                id="quiz-pdf-upload"
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
-                required
-              />
-              <div className="file-input-label">
-                {pdfFile ? (
-                  <span>
-                    📄 <span>{pdfFile.name}</span> ({(pdfFile.size / 1024 / 1024).toFixed(1)} MB)
-                  </span>
-                ) : (
-                  <span>
-                    Drop your PDF here or <span>browse</span>
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="range-group">
-            <div className="form-group">
-              <label htmlFor="pdf-start-q" className="form-label">
-                Start Question No.
-              </label>
-              <input
-                id="pdf-start-q"
-                className="form-input"
-                type="number"
-                min="1"
-                placeholder="1"
-                value={pdfStartQ}
-                onChange={(e) => setPdfStartQ(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="pdf-end-q" className="form-label">
-                End Question No.
-              </label>
-              <input
-                id="pdf-end-q"
-                className="form-input"
-                type="number"
-                min="1"
-                placeholder="20"
-                value={pdfEndQ}
-                onChange={(e) => setPdfEndQ(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {pdfStartQ && pdfEndQ && Number(pdfEndQ) > Number(pdfStartQ) && (
-            <p className="range-info">
-              ⚡ This speed quiz will have <strong>{Number(pdfEndQ) - Number(pdfStartQ) + 1}</strong> questions (30 seconds per question).
-            </p>
-          )}
-
-          <button className="btn btn-primary btn-lg" type="submit" disabled={isPdfLoading}>
-            {isPdfLoading ? (
-              <>
-                <span className="spinner" /> Creating Speed Quiz...
-              </>
-            ) : (
-              'Create Speed Quiz (PDF)'
             )}
           </button>
         </form>

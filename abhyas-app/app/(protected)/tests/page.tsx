@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { TestSeries, Subject, SUBJECTS } from '@/lib/types';
-import SubjectFilter from '@/components/SubjectFilter';
-import TestSeriesCard from '@/components/TestSeriesCard';
+import SubjectFilter from '@/components/exam/SubjectFilter';
+import TestSeriesCard from '@/components/exam/TestSeriesCard';
 
 export default function TestsPage() {
   const router = useRouter();
