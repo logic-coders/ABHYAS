@@ -275,11 +275,31 @@ ${JSON.stringify(chunk, null, 2)}`;
  * Used for the Daily Streak Quiz auto-generation.
  */
 export async function generateStreakQuestions(subject: Subject): Promise<ManualQuestion[]> {
+  const subjectGuidance = (subject === 'Modern History' || (subject as string) === 'History')
+    ? `CRITICAL REQUIREMENT FOR "Modern History":
+Every single question MUST be strictly from Modern Indian History (1757–1947).
+Topics to cover:
+- Revolt of 1857 (leaders, centers, causes)
+- Indian Freedom Struggle & National Movement
+- Socio-Religious Reform Movements (Brahmo Samaj, Arya Samaj, Satyashodhak Samaj, Ramakrishna Mission, Aligarh Movement)
+- Formation and Sessions of Indian National Congress (1885–1947)
+- Partition of Bengal (1905), Swadeshi & Boycott Movement
+- Home Rule League, Lucknow Pact, Rowlatt Act, Jallianwala Bagh (1919)
+- Non-Cooperation Movement (1920-22), Khilafat Movement, Chauri Chaura
+- Simon Commission, Lahore Session (Purna Swaraj 1929), Dandi March & Civil Disobedience (1930)
+- Round Table Conferences, Poona Pact (1932), Government of India Act 1935
+- Quit India Movement (1942), INA & Subhash Chandra Bose, Cabinet Mission & Independence 1947
+- British Governors-General and Viceroys (Dalhousie, Canning, Ripon, Curzon, Mountbatten)
+- Revolutionary freedom fighters (Bhagat Singh, Chandrashekhar Azad, Surya Sen)
+DO NOT include Ancient or Medieval or non-Indian World History questions.`
+    : `Questions should cover a broad range of sub-topics within ${subject}.`;
+
   const prompt = `You are an expert quiz question creator for competitive exam preparation in India.
 
 Generate exactly 20 multiple-choice questions for the subject: "${subject}".
 Each question should be at an intermediate difficulty level, suitable for competitive exam aspirants.
-Questions should cover a broad range of sub-topics within ${subject}.
+
+${subjectGuidance}
 
 Return ONLY a valid JSON array (no markdown, no code fences, no explanation):
 [

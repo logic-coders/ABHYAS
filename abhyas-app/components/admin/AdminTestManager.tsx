@@ -279,11 +279,13 @@ export default function AdminTestManager() {
                     </td>
                     <td>
                       <span className="date-text">
-                        {new Date(test.createdAt).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
+                        {test.createdAt
+                          ? new Date(test.createdAt).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : '—'}
                       </span>
                     </td>
                     <td>

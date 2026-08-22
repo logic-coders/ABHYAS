@@ -1,13 +1,13 @@
 /* ─── Shared TypeScript types for Abhyas ─── */
 
-export type Subject = 'Music' | 'Math' | 'History' | 'Geography' | 'Science' | 'English' | 'Hindi';
+export type Subject = 'Music' | 'Math' | 'Modern History' | 'Geography' | 'Science' | 'English' | 'Hindi';
 
-export const SUBJECTS: Subject[] = ['Music', 'Math', 'History', 'Geography', 'Science', 'English', 'Hindi'];
+export const SUBJECTS: Subject[] = ['Music', 'Math', 'Modern History', 'Geography', 'Science', 'English', 'Hindi'];
 
 export const SUBJECT_ICONS: Record<Subject, string> = {
   Music: '🎵',
   Math: '📐',
-  History: '📜',
+  'Modern History': '📜',
   Geography: '🌍',
   Science: '🔬',
   English: '📖',
@@ -17,7 +17,7 @@ export const SUBJECT_ICONS: Record<Subject, string> = {
 export const SUBJECT_COLORS: Record<Subject, string> = {
   Music: '#a855f7',
   Math: '#3b82f6',
-  History: '#f59e0b',
+  'Modern History': '#f59e0b',
   Geography: '#10b981',
   Science: '#06b6d4',
   English: '#ec4899',
@@ -44,12 +44,11 @@ export interface BilingualQuestion {
     text: string;
     options: string[];
   };
-  correctAnswer?: string; // "A" | "B" | "C" | "D" | "E"
+  correctAnswer?: string;
   status?: 'verified' | 'warning' | 'error';
   issues?: string[];
 }
 
-/** Metadata for a test series or speed quiz, stored in S3/DB as JSON */
 export interface TestSeries {
   id: string;
   title: string;
@@ -57,37 +56,34 @@ export interface TestSeries {
   s3Key?: string;
   startQuestion?: number;
   endQuestion?: number;
-  createdAt: string; // ISO date string
+  createdAt?: string;
   isRandom?: boolean;
   randomQuestions?: { s3Key: string; number: number }[];
+  cachedQuestions?: Map<Language, Question[]> | Record<string, Question[]> | any;
+  answers?: Map<number, string> | Record<number, string> | Record<string, string> | any;
   format?: ExamFormat;
   isQuiz?: boolean;
-  durationPerQuestion?: number; // In seconds (default: 30 for quiz)
+  durationPerQuestion?: number;
   isManual?: boolean;
   manualQuestions?: ManualQuestion[];
-  bilingualQuestions?: BilingualQuestion[];
-  answers?: Record<number, string>;
   isDailyStreak?: boolean;
-  streakDate?: string; // "YYYY-MM-DD"
-  cachedQuestions?: Record<string, Question[]>; // Keyed by language ('en' | 'hi')
-  testType?: 'prev-year' | 'practice'; // Type of test
-  durationMinutes?: number; // Duration in minutes (e.g. 150 for prev-year, 80 for practice)
+  streakDate?: string;
+  testType?: 'practice' | 'prev-year';
+  durationMinutes?: number;
+  bilingualQuestions?: BilingualQuestion[];
 }
 
-/** A single parsed question (options only — no answer exposed to client) */
 export interface Question {
   number: number;
   text: string;
-  options: string[]; // ["A. ...", "B. ...", "C. ...", "D. ..."]
+  options: string[];
 }
 
-/** A user's answer for one question */
 export interface ExamAnswer {
   questionNumber: number;
-  selectedOption: string; // "A" | "B" | "C" | "D" | "E"
+  selectedOption: string;
 }
 
-/** Breakdown for a single question in results */
 export interface ResultItem {
   questionNumber: number;
   questionText: string;
@@ -97,7 +93,6 @@ export interface ResultItem {
   isCorrect: boolean;
 }
 
-/** Final exam result */
 export interface ExamResult {
   seriesId: string;
   seriesTitle: string;
@@ -107,16 +102,14 @@ export interface ExamResult {
   incorrect: number;
   unanswered: number;
   percentage: number;
-  breakdown: ResultItem[];
   format?: ExamFormat;
+  breakdown: ResultItem[];
 }
 
-/* ─── Phase II: Authentication types ─── */
-
-export type UserRole = 'admin' | 'user';
+/* ─── User & Auth types ─── */
+export type UserRole = 'user' | 'admin';
 export type AccountStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
-/** Full user record stored in S3/DB (includes password hash) */
 export interface User {
   id: string;
   name: string;
@@ -124,24 +117,32 @@ export interface User {
   passwordHash: string;
   role: UserRole;
   accountStatus: AccountStatus;
-  createdAt: string; // ISO date string
-  resetOtp?: string;
-  resetOtpExpiry?: string;
+  createdAt: string;
   currentStreak?: number;
   longestStreak?: number;
   lastStreakDate?: string;
   streakHistory?: string[];
+  resetOtp?: string;
+  resetOtpExpiry?: string;
 }
 
-/** Safe user sent to the client (no password hash) */
 export interface SafeUser {
   id: string;
   name: string;
   email: string;
   role: UserRole;
   accountStatus: AccountStatus;
+  createdAt?: string;
   currentStreak?: number;
   longestStreak?: number;
   lastStreakDate?: string;
   streakHistory?: string[];
+}
+
+export interface AuthContextType {
+  user: SafeUser | null;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
