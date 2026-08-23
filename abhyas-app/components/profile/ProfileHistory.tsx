@@ -62,157 +62,159 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
     setSelectedResult(examResult);
   };
 
-  if (results.length === 0) {
-    return (
-      <div className="glass-card" style={{ padding: '2.5rem', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', marginBottom: '1.25rem' }}>
-          You haven&apos;t taken any tests or quizzes yet.
-        </p>
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-          <Link href="/tests" className="btn btn-primary">
-            Browse Practice Tests 📝
-          </Link>
-          <Link href="/quiz" className="btn btn-secondary">
-            Take Speed Quiz ⚡
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="history-wrapper">
-      {/* Quick Stats Overview */}
-      <div className="stats-overview-grid">
-        <div className="glass-card stat-card" onClick={() => setActiveTab('tests')} style={{ cursor: 'pointer' }}>
-          <div className="stat-icon-wrap test-icon-bg">📝</div>
-          <div className="stat-info">
-            <span className="stat-label">Full Tests Completed</span>
-            <div className="stat-values">
-              <span className="stat-count">{testResults.length}</span>
-              {testResults.length > 0 && (
-                <span className="stat-badge badge-blue">Avg: {testAvg}%</span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-card stat-card" onClick={() => setActiveTab('quizzes')} style={{ cursor: 'pointer' }}>
-          <div className="stat-icon-wrap quiz-icon-bg">⚡</div>
-          <div className="stat-info">
-            <span className="stat-label">Speed Quizzes Completed</span>
-            <div className="stat-values">
-              <span className="stat-count">{quizResults.length}</span>
-              {quizResults.length > 0 && (
-                <span className="stat-badge badge-amber">Avg: {quizAvg}%</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Format Filter Tabs */}
-      <div className="history-tabs-bar">
-        <div className="history-tabs">
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveTab('all')}
-          >
-            All Attempts ({results.length})
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === 'tests' ? 'active' : ''}`}
-            onClick={() => setActiveTab('tests')}
-          >
-            📝 Practice & Exams ({testResults.length})
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === 'quizzes' ? 'active' : ''}`}
-            onClick={() => setActiveTab('quizzes')}
-          >
-            ⚡ Speed Quizzes ({quizResults.length})
-          </button>
-        </div>
-      </div>
-
-      {/* Results List */}
-      {displayedResults.length === 0 ? (
-        <div className="glass-card" style={{ padding: '2.5rem', textAlign: 'center', marginTop: '1rem' }}>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-            {activeTab === 'tests'
-              ? 'No Practice Tests taken yet.'
-              : 'No Speed Quizzes taken yet.'}
+      {results.length === 0 ? (
+        <div className="glass-card empty-history-card">
+          <div className="empty-icon-wrap">📜</div>
+          <h3 className="empty-history-title">No Test History Yet</h3>
+          <p className="empty-history-text">
+            You haven&apos;t taken any practice tests or quizzes yet. Start one now to track your score, accuracy, and daily progress!
           </p>
-          <Link
-            href={activeTab === 'tests' ? '/tests' : '/quiz'}
-            className="btn btn-primary btn-sm"
-          >
-            {activeTab === 'tests' ? 'Start Practice 📝' : 'Start a Quiz ⚡'}
-          </Link>
+          <div className="empty-actions">
+            <Link href="/tests" className="btn btn-primary empty-btn">
+              Browse Practice Tests 📝
+            </Link>
+            <Link href="/quiz" className="btn btn-secondary empty-btn">
+              Take Speed Quiz ⚡
+            </Link>
+          </div>
         </div>
       ) : (
-        <div className="results-list">
-          {displayedResults.map((result) => {
-            const isQuiz = result.format === 'quiz' || result.totalQuestions <= 20;
-            const subjectColor = isQuiz
-              ? '#f59e0b'
-              : SUBJECT_COLORS[result.subject] || 'var(--accent-light)';
-            const icon = isQuiz ? '⚡' : SUBJECT_ICONS[result.subject] || '📝';
-
-            return (
-              <div
-                key={result.id}
-                className="glass-card result-card"
-                onClick={() => handleResultClick(result)}
-                style={{
-                  borderLeft: `4px solid ${subjectColor}`,
-                }}
-              >
-                <div>
-                  <div className="card-top-meta">
-                    <span className={isQuiz ? 'badge-quiz' : 'badge-test'}>
-                      {isQuiz ? '⚡ SPEED QUIZ' : '📝 FULL TEST'}
-                    </span>
-                    <span className="subject-meta-text">• {result.subject}</span>
-                  </div>
-                  <h3 className="result-card-title">
-                    <span style={{ marginRight: '0.4rem' }}>{icon}</span>
-                    {result.seriesTitle}
-                  </h3>
-                  <p className="result-card-date">
-                    Taken on: {new Date(result.date).toLocaleDateString()} at{' '}
-                    {new Date(result.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-
-                <div className="result-card-right">
-                  <div>
-                    <div
-                      className="score-percentage"
-                      style={{
-                        color:
-                          result.percentage >= 70
-                            ? 'var(--color-correct)'
-                            : result.percentage >= 40
-                            ? '#f59e0b'
-                            : 'var(--text-primary)',
-                      }}
-                    >
-                      {result.percentage}%
-                    </div>
-                    <p className="score-detail">
-                      {result.score} / {result.totalQuestions} correct
-                    </p>
-                  </div>
-                  <div className="arrow-icon">➔</div>
+        <>
+          {/* Quick Stats Overview */}
+          <div className="stats-overview-grid">
+            <div className="glass-card stat-card" onClick={() => setActiveTab('tests')} style={{ cursor: 'pointer' }}>
+              <div className="stat-icon-wrap test-icon-bg">📝</div>
+              <div className="stat-info">
+                <span className="stat-label">Full Tests Completed</span>
+                <div className="stat-values">
+                  <span className="stat-count">{testResults.length}</span>
+                  {testResults.length > 0 && (
+                    <span className="stat-badge badge-blue">Avg: {testAvg}%</span>
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
+
+            <div className="glass-card stat-card" onClick={() => setActiveTab('quizzes')} style={{ cursor: 'pointer' }}>
+              <div className="stat-icon-wrap quiz-icon-bg">⚡</div>
+              <div className="stat-info">
+                <span className="stat-label">Speed Quizzes Completed</span>
+                <div className="stat-values">
+                  <span className="stat-count">{quizResults.length}</span>
+                  {quizResults.length > 0 && (
+                    <span className="stat-badge badge-amber">Avg: {quizAvg}%</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Format Filter Tabs */}
+          <div className="history-tabs-bar">
+            <div className="history-tabs">
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+                onClick={() => setActiveTab('all')}
+              >
+                All Attempts ({results.length})
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'tests' ? 'active' : ''}`}
+                onClick={() => setActiveTab('tests')}
+              >
+                📝 Practice & Exams ({testResults.length})
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'quizzes' ? 'active' : ''}`}
+                onClick={() => setActiveTab('quizzes')}
+              >
+                ⚡ Speed Quizzes ({quizResults.length})
+              </button>
+            </div>
+          </div>
+
+          {/* Results List */}
+          {displayedResults.length === 0 ? (
+            <div className="glass-card empty-filter-card">
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                {activeTab === 'tests'
+                  ? 'No Practice Tests taken yet.'
+                  : 'No Speed Quizzes taken yet.'}
+              </p>
+              <Link
+                href={activeTab === 'tests' ? '/tests' : '/quiz'}
+                className="btn btn-primary btn-sm"
+              >
+                {activeTab === 'tests' ? 'Start Practice 📝' : 'Start a Quiz ⚡'}
+              </Link>
+            </div>
+          ) : (
+            <div className="results-list">
+              {displayedResults.map((result) => {
+                const isQuiz = result.format === 'quiz' || result.totalQuestions <= 20;
+                const subjectColor = isQuiz
+                  ? '#f59e0b'
+                  : SUBJECT_COLORS[result.subject] || 'var(--accent-light)';
+                const icon = isQuiz ? '⚡' : SUBJECT_ICONS[result.subject] || '📝';
+
+                return (
+                  <div
+                    key={result.id}
+                    className="glass-card result-card"
+                    onClick={() => handleResultClick(result)}
+                    style={{
+                      borderLeft: `4px solid ${subjectColor}`,
+                    }}
+                  >
+                    <div>
+                      <div className="card-top-meta">
+                        <span className={isQuiz ? 'badge-quiz' : 'badge-test'}>
+                          {isQuiz ? '⚡ SPEED QUIZ' : '📝 FULL TEST'}
+                        </span>
+                        <span className="subject-meta-text">• {result.subject}</span>
+                      </div>
+                      <h3 className="result-card-title">
+                        <span style={{ marginRight: '0.4rem' }}>{icon}</span>
+                        {result.seriesTitle}
+                      </h3>
+                      <p className="result-card-date">
+                        Taken on: {new Date(result.date).toLocaleDateString()} at{' '}
+                        {new Date(result.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+
+                    <div className="result-card-right">
+                      <div>
+                        <div
+                          className="score-percentage"
+                          style={{
+                            color:
+                              result.percentage >= 70
+                                ? 'var(--color-correct)'
+                                : result.percentage >= 40
+                                ? '#f59e0b'
+                                : 'var(--text-primary)',
+                          }}
+                        >
+                          {result.percentage}%
+                        </div>
+                        <p className="score-detail">
+                          {result.score} / {result.totalQuestions} correct
+                        </p>
+                      </div>
+                      <div className="arrow-icon">➔</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {selectedResult && (
@@ -227,6 +229,63 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
           display: flex;
           flex-direction: column;
           gap: 1.5rem;
+          width: 100%;
+        }
+
+        /* ── Empty State ── */
+        .empty-history-card {
+          padding: 2.5rem 1.5rem;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 0.85rem;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .empty-icon-wrap {
+          font-size: 2.5rem;
+          margin-bottom: 0.25rem;
+        }
+
+        .empty-history-title {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin: 0;
+        }
+
+        .empty-history-text {
+          color: var(--text-secondary);
+          font-size: 0.95rem;
+          line-height: 1.5;
+          max-width: 480px;
+          margin: 0 auto;
+        }
+
+        .empty-actions {
+          display: flex;
+          gap: 0.75rem;
+          justify-content: center;
+          align-items: center;
+          flex-wrap: wrap;
+          margin-top: 0.75rem;
+          width: 100%;
+        }
+
+        .empty-btn {
+          padding: 0.65rem 1.25rem;
+          font-size: 0.9rem;
+          font-weight: 600;
+          box-sizing: border-box;
+        }
+
+        .empty-filter-card {
+          padding: 2.5rem;
+          text-align: center;
+          margin-top: 1rem;
         }
 
         /* ── Stats Overview Grid ── */
@@ -234,6 +293,7 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 1rem;
+          width: 100%;
         }
 
         .stat-card {
@@ -242,6 +302,7 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
           align-items: center;
           gap: 1.25rem;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
+          box-sizing: border-box;
         }
 
         .stat-card:hover {
@@ -315,6 +376,7 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
         .history-tabs-bar {
           display: flex;
           justify-content: flex-start;
+          width: 100%;
         }
 
         .history-tabs {
@@ -353,6 +415,7 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
         .results-list {
           display: grid;
           gap: 0.85rem;
+          width: 100%;
         }
 
         .result-card {
@@ -362,6 +425,7 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
           align-items: center;
           cursor: pointer;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
+          box-sizing: border-box;
         }
 
         .result-card:hover {
@@ -445,17 +509,59 @@ export default function ProfileHistory({ results }: ProfileHistoryProps) {
         }
 
         @media (max-width: 640px) {
+          .empty-history-card {
+            padding: 2rem 1.25rem;
+          }
+          .empty-history-title {
+            font-size: 1.15rem;
+          }
+          .empty-history-text {
+            font-size: 0.88rem;
+          }
+          .empty-actions {
+            flex-direction: column;
+            width: 100%;
+            gap: 0.75rem;
+          }
+          .empty-actions :global(.btn.empty-btn) {
+            width: 100% !important;
+            display: flex !important;
+            justify-content: center !important;
+            text-align: center !important;
+            padding: 0.75rem 1rem !important;
+            box-sizing: border-box !important;
+          }
           .stats-overview-grid {
             grid-template-columns: 1fr;
+          }
+          .history-tabs-bar {
+            overflow-x: auto;
+            width: 100%;
+            padding-bottom: 0.4rem;
+            -webkit-overflow-scrolling: touch;
+          }
+          .history-tabs {
+            width: max-content;
+          }
+          .tab-btn {
+            padding: 0.4rem 0.85rem;
+            font-size: 0.8rem;
           }
           .result-card {
             flex-direction: column;
             align-items: flex-start;
-            gap: 1rem;
+            gap: 0.85rem;
+            padding: 1.1rem 1rem;
           }
           .result-card-right {
             width: 100%;
             justify-content: space-between;
+            border-top: 1px dashed var(--border-subtle);
+            padding-top: 0.65rem;
+            text-align: left;
+          }
+          .score-percentage {
+            font-size: 1.3rem;
           }
         }
       `}</style>

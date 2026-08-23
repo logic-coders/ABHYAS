@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 interface ProfileViewProps {
   user: {
     id: string;
@@ -42,6 +44,16 @@ export default function ProfileView({ user }: ProfileViewProps) {
               </span>
             </div>
           </div>
+
+          <div className="profile-actions">
+            <Link href="/test-history" className="btn btn-primary history-btn">
+              <span>View Test History 📊</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14"></path>
+                <path d="m12 5 7 7-7 7"></path>
+              </svg>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -82,6 +94,7 @@ export default function ProfileView({ user }: ProfileViewProps) {
           font-size: 1.75rem;
           font-weight: 800;
           box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+          flex-shrink: 0;
         }
 
         .profile-title {
@@ -135,6 +148,43 @@ export default function ProfileView({ user }: ProfileViewProps) {
           padding: 0.2rem 0.6rem;
           border-radius: var(--radius-full);
           width: fit-content;
+        }
+
+        .profile-actions {
+          margin-top: 2rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid var(--border-subtle);
+        }
+
+        .history-btn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+        }
+
+        @media (max-width: 640px) {
+          .profile-card {
+            padding: 1.5rem 1.25rem;
+          }
+          .profile-header-section {
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.25rem;
+          }
+          .avatar-circle {
+            width: 52px;
+            height: 52px;
+            font-size: 1.5rem;
+          }
+          .profile-title {
+            font-size: 1.3rem;
+          }
+          .field-value {
+            word-break: break-all;
+            font-size: 0.95rem;
+          }
         }
       `}</style>
     </div>

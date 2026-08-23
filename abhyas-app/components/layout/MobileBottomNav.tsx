@@ -18,7 +18,7 @@ export default function MobileBottomNav() {
   const isPractice = pathname === '/tests';
   const isPrevYear = pathname === '/prev-year';
   const isQuiz = pathname?.startsWith('/quiz');
-  const isProfile = pathname?.startsWith('/profile') || pathname?.startsWith('/admin');
+  const isHistory = pathname === '/test-history';
 
   return (
     <nav className="mobile-bottom-nav">
@@ -74,14 +74,14 @@ export default function MobileBottomNav() {
         </li>
 
         <li className="nav-item">
-          <Link href={user?.role === 'admin' ? '/admin' : '/profile'} className={`nav-link ${isProfile ? 'active' : ''}`}>
+          <Link href="/test-history" className={`nav-link ${isHistory ? 'active' : ''}`}>
             <div className="icon-wrapper">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
+                <path d="M12 8v4l3 3"></path>
+                <circle cx="12" cy="12" r="9"></circle>
               </svg>
             </div>
-            <span>{user?.role === 'admin' ? 'Admin' : 'Profile'}</span>
+            <span>History</span>
           </Link>
         </li>
       </ul>
