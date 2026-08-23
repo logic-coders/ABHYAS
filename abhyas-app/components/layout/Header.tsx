@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/auth-context';
 import { useTheme } from '@/lib/context/theme-context';
@@ -35,10 +36,12 @@ export default function Header() {
     <header className="header">
       <div className="header-inner">
         <Link href="/" className="logo" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
-          <img
+          <Image
             src="/logo.png"
             alt="Abhyas Logo"
-            style={{ height: '32px', marginRight: '8px' }}
+            width={32}
+            height={32}
+            style={{ height: '32px', width: 'auto', marginRight: '8px' }}
           />
           <span style={{ fontWeight: 'bold', fontSize: '1.65rem', letterSpacing: '-0.02em' }}>ABHYAS</span>
         </Link>

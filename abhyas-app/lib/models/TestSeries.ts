@@ -53,4 +53,6 @@ const TestSeriesSchema = new mongoose.Schema({
   }
 });
 
+TestSeriesSchema.index({ isDailyStreak: 1, streakDate: 1 });
+
 export const TestSeries = mongoose.models.TestSeries || mongoose.model('TestSeries', TestSeriesSchema);

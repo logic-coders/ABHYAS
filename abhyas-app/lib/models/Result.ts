@@ -26,4 +26,6 @@ const ResultSchema = new mongoose.Schema({
   breakdown: [ResultItemSchema],
 });
 
+ResultSchema.index({ userId: 1, date: -1 });
+
 export const Result = mongoose.models.Result || mongoose.model('Result', ResultSchema);

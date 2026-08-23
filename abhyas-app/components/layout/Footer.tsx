@@ -2,6 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 
+import Image from 'next/image';
+
 export default function Footer() {
   const pathname = usePathname();
 
@@ -14,10 +16,13 @@ export default function Footer() {
     <footer className="footer">
       <div className="container footer-inner">
         <div className="footer-left">
-          <img
+          <Image
             src="/logo.png"
             alt="Abhyas Logo"
+            width={32}
+            height={32}
             className="footer-logo"
+            style={{ width: 'auto', height: '32px' }}
           />
           <p>&copy; {new Date().getFullYear()} ABHYAS, Inc.</p>
         </div>
