@@ -1,18 +1,16 @@
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { getUser } from '@/lib/utils/auth';
-import { SUBJECTS, Subject } from '@/lib/types';
-import { CURATED_STREAK_QUESTIONS } from '@/lib/services/streak-pool';
-import { generateStreakQuestions } from '@/lib/services/gemini';
+import { SUBJECTS, Subject, BilingualQuestion } from '@/lib/types';
+import { BILINGUAL_STREAK_QUESTIONS } from '@/lib/services/streak-pool';
+import { generateStreakQuestions, translateQuestionsToHindi } from '@/lib/services/gemini';
 import connectToDatabase from '@/lib/db/mongoose';
 import { TestSeries } from '@/lib/models/TestSeries';
-
 import { getTodayDateIST } from '@/lib/utils/date-utils';
 
 /**
  * POST /api/admin/generate-streak-quiz
- * Auto-generates today's 20-question rotating Daily Streak Quiz.
- * Tries AI generation first (Gemini), falls back to curated pool.
+ * Auto-generates today's 20-question rotating Daily Streak Quiz in both English and Hindi.
  */
 export async function POST(request: Request) {
   try {
@@ -45,26 +43,64 @@ export async function POST(request: Request) {
       console.log(`🗑️ Admin override: Deleted existing streak quiz for ${todayDate}`);
     }
 
-    // Try AI-powered generation first, fall back to curated pool
-    let selectedQuestions;
-    let generationMethod = 'ai';
+    let bilingualQuestions: BilingualQuestion[] = [];
+    let generationMethod = 'curated';
 
+    // 1. Try AI-powered generation first if configured
     try {
-      selectedQuestions = await generateStreakQuestions(rotatingSubject);
-      console.log(`✅ AI generated ${selectedQuestions.length} questions for ${rotatingSubject}`);
+      const aiQuestions = await generateStreakQuestions(rotatingSubject);
+      const translatedHindi = await translateQuestionsToHindi(aiQuestions);
+
+      bilingualQuestions = aiQuestions.map((q, idx) => ({
+        number: idx + 1,
+        english: {
+          text: q.text,
+          options: q.options,
+        },
+        hindi: {
+          text: translatedHindi[idx]?.text || q.text,
+          options: translatedHindi[idx]?.options || q.options,
+        },
+        correctAnswer: q.correctAnswer || 'A',
+        status: 'verified',
+      }));
+      generationMethod = 'ai';
+      console.log(`✅ AI generated ${bilingualQuestions.length} bilingual questions for ${rotatingSubject}`);
     } catch (aiError) {
-      console.warn('⚠️ AI generation failed, falling back to curated pool:', aiError);
+      console.warn('⚠️ AI generation failed or skipped, using curated bilingual pool:', aiError);
       generationMethod = 'curated';
 
-      const curatedList = CURATED_STREAK_QUESTIONS[rotatingSubject] || CURATED_STREAK_QUESTIONS.Music;
+      const curatedList = BILINGUAL_STREAK_QUESTIONS[rotatingSubject] || BILINGUAL_STREAK_QUESTIONS.Music;
       const shuffled = [...curatedList].sort(() => 0.5 - Math.random());
-      selectedQuestions = shuffled.slice(0, 20).map((q, idx) => ({
+      bilingualQuestions = shuffled.slice(0, 20).map((q, idx) => ({
+        ...q,
         number: idx + 1,
-        text: q.text,
-        options: q.options,
-        correctAnswer: q.correctAnswer,
       }));
     }
+
+    // Build cached questions and answers map
+    const cachedEn = bilingualQuestions.map((q) => ({
+      number: q.number,
+      text: q.english.text,
+      options: q.english.options,
+    }));
+
+    const cachedHi = bilingualQuestions.map((q) => ({
+      number: q.number,
+      text: q.hindi.text,
+      options: q.hindi.options,
+    }));
+
+    const answersMap: Record<string, string> = {};
+    bilingualQuestions.forEach((q) => {
+      if (q.correctAnswer) {
+        answersMap[String(q.number)] = q.correctAnswer;
+      }
+    });
+
+    const cachedQuestionsMap = new Map();
+    cachedQuestionsMap.set('en', cachedEn);
+    cachedQuestionsMap.set('hi', cachedHi);
 
     const quizId = uuidv4();
     const streakQuiz = {
@@ -74,13 +110,15 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
       format: 'quiz',
       isQuiz: true,
-      isManual: true,
+      isManual: false,
       durationPerQuestion: 30,
       isDailyStreak: true,
       streakDate: todayDate,
-      manualQuestions: selectedQuestions,
+      bilingualQuestions,
+      cachedQuestions: cachedQuestionsMap,
+      answers: answersMap,
       startQuestion: 1,
-      endQuestion: selectedQuestions.length,
+      endQuestion: bilingualQuestions.length,
     };
 
     await TestSeries.create(streakQuiz);

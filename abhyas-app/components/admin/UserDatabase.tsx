@@ -243,6 +243,30 @@ export default function UserDatabase() {
           font-weight: 600;
           color: var(--text-primary);
         }
+
+        @media (max-width: 640px) {
+          .db-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem;
+          }
+          .db-meta {
+            flex-wrap: wrap;
+            gap: 0.35rem 0.5rem;
+            font-size: 0.8rem;
+          }
+          .db-toggle {
+            align-self: flex-end;
+            font-size: 0.8rem;
+          }
+          .db-details {
+            padding: 1rem;
+          }
+          .test-history-grid {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
     </div>
   );

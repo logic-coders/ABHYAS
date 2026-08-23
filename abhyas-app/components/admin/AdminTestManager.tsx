@@ -663,7 +663,7 @@ export default function AdminTestManager() {
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 1000;
+          z-index: 99999;
           padding: 1rem;
         }
 
@@ -732,6 +732,37 @@ export default function AdminTestManager() {
           to {
             transform: scale(1);
             opacity: 1;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .controls-container {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+          }
+          .search-bar {
+            min-width: 100%;
+            width: 100%;
+          }
+          .type-pills {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .table-container {
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .test-row td {
+            padding: 0.75rem 0.65rem;
+          }
+          .actions-cell {
+            gap: 0.35rem;
+          }
+          .btn-action {
+            padding: 0.3rem 0.5rem;
+            font-size: 0.75rem;
           }
         }
       `}</style>

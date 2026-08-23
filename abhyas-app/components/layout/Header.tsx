@@ -350,6 +350,27 @@ export default function Header() {
           padding: 0.4rem 0.85rem;
           font-size: 0.82rem;
         }
+
+        @media (max-width: 768px) {
+          .desktop-only {
+            display: none !important;
+          }
+          .header-inner {
+            padding: 0.75rem 1rem;
+          }
+          .nav-links {
+            gap: 0.6rem;
+          }
+          .theme-toggle-btn {
+            width: 2.2rem;
+            height: 2.2rem;
+          }
+          .user-avatar {
+            width: 2.2rem;
+            height: 2.2rem;
+            font-size: 0.95rem;
+          }
+        }
       `}</style>
     </header>
   );

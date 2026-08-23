@@ -658,12 +658,19 @@ export default function AdminQuizManager() {
           border-top: 1px solid var(--border-subtle);
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 640px) {
+          .method-toggle-container {
+            flex-direction: column;
+            width: 100%;
+          }
           .header-inputs-grid,
           .options-grid,
           .submit-bar {
             grid-template-columns: 1fr;
             flex-direction: column;
+          }
+          .submit-bar button {
+            width: 100%;
           }
         }
       `}</style>

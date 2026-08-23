@@ -234,6 +234,35 @@ export default function UserApprovals() {
           background: rgba(245, 158, 11, 0.15);
           color: #f59e0b;
         }
+
+        @media (max-width: 640px) {
+          .user-card {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.85rem;
+            padding: 0.85rem;
+          }
+          .user-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: stretch;
+            gap: 0.4rem;
+            border-top: 1px dashed var(--border-subtle);
+            padding-top: 0.65rem;
+            width: 100%;
+          }
+          .user-actions button {
+            flex: 1;
+            min-width: 75px;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.8rem;
+            text-align: center;
+            justify-content: center;
+          }
+          .user-info span {
+            word-break: break-all;
+          }
+        }
       `}</style>
     </div>
   );

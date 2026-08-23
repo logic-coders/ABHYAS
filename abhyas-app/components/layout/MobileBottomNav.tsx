@@ -91,27 +91,29 @@ export default function MobileBottomNav() {
           display: none; /* Hidden on desktop by default */
         }
 
-        @media (max-width: 767px) {
+        @media (max-width: 768px) {
           .mobile-bottom-nav {
             display: block;
             position: fixed;
-            bottom: 20px;
+            bottom: 16px;
             left: 50%;
             transform: translateX(-50%);
-            width: 92%;
-            max-width: 400px;
+            width: calc(100% - 1.5rem);
+            max-width: 420px;
             background: var(--bg-card);
             border: 1px solid var(--border-medium);
             border-radius: 2rem;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-            padding: 0.5rem 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.15);
+            padding: 0.35rem 0.5rem;
             z-index: 1000;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-sizing: border-box;
           }
 
           .nav-items {
             display: flex;
-            justify-content: space-between;
+            justify-content: space-around;
             align-items: center;
             list-style: none;
             padding: 0;
@@ -123,6 +125,7 @@ export default function MobileBottomNav() {
             flex: 1;
             display: flex;
             justify-content: center;
+            min-width: 0;
           }
 
           .nav-link {
@@ -132,26 +135,27 @@ export default function MobileBottomNav() {
             justify-content: center;
             text-decoration: none;
             color: var(--text-muted);
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             font-weight: 600;
-            gap: 0.25rem;
+            gap: 0.15rem;
             transition: all 0.2s ease;
             width: 100%;
+            padding: 0.15rem 0;
           }
 
           .icon-wrapper {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             transition: all 0.2s ease;
           }
 
           .icon-wrapper svg {
-            width: 20px;
-            height: 20px;
+            width: 19px;
+            height: 19px;
             stroke-width: 2.2;
           }
 

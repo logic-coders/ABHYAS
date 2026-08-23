@@ -463,27 +463,32 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
         .modal-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.75);
-          backdrop-filter: blur(8px);
+          background: rgba(0, 0, 0, 0.85);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 1000;
-          padding: 1.5rem;
+          z-index: 99999;
+          padding: 2rem 1.5rem;
           animation: fadeIn 0.2s ease;
+          overflow: hidden;
         }
 
         .question-editor-modal {
           background: #0f172a;
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 16px;
           width: 95vw;
           max-width: 1200px;
-          height: 90vh;
+          height: 88vh;
+          max-height: 88vh;
           display: flex;
           flex-direction: column;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
           overflow: hidden;
+          position: relative;
+          z-index: 100000;
         }
 
         /* Header */
@@ -494,6 +499,7 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
           padding: 1rem 1.5rem;
           background: rgba(30, 41, 59, 0.8);
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          flex-shrink: 0;
         }
 
         .title-row {
@@ -580,6 +586,7 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
           font-size: 0.88rem;
           font-weight: 600;
           text-align: center;
+          flex-shrink: 0;
         }
 
         .status-banner.success {
@@ -598,8 +605,11 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
         .modal-body-layout {
           display: grid;
           grid-template-columns: 280px 1fr;
+          grid-template-rows: minmax(0, 1fr);
           flex: 1;
           overflow: hidden;
+          min-height: 0;
+          height: 100%;
         }
 
         /* Sidebar */
@@ -609,11 +619,14 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          min-height: 0;
+          height: 100%;
         }
 
         .sidebar-search {
           padding: 0.75rem;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          flex-shrink: 0;
         }
 
         .search-input {
@@ -637,6 +650,11 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 0.4rem;
+          min-height: 0;
+          flex: 1;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(168, 85, 247, 0.4) rgba(15, 23, 42, 0.4);
+          -webkit-overflow-scrolling: touch;
         }
 
         .nav-btn {
@@ -691,11 +709,31 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
 
         /* Main Editor */
         .question-editor-main {
-          padding: 1.25rem 1.5rem;
+          padding: 1.25rem 1.5rem 3.5rem 1.5rem;
           overflow-y: auto;
+          overflow-x: hidden;
           display: flex;
           flex-direction: column;
           gap: 1.25rem;
+          min-height: 0;
+          height: 100%;
+          max-height: 100%;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(168, 85, 247, 0.5) rgba(15, 23, 42, 0.4);
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .question-editor-main::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .question-editor-main::-webkit-scrollbar-thumb {
+          background: rgba(168, 85, 247, 0.4);
+          border-radius: 4px;
+        }
+
+        .question-editor-main::-webkit-scrollbar-track {
+          background: rgba(15, 23, 42, 0.4);
         }
 
         .q-editor-header {
@@ -704,6 +742,7 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
           align-items: center;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           padding-bottom: 0.75rem;
+          flex-shrink: 0;
         }
 
         .q-title-badge {
@@ -969,7 +1008,9 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
           justify-content: space-between;
           align-items: center;
           border-top: 1px solid rgba(255, 255, 255, 0.08);
-          padding-top: 0.75rem;
+          padding-top: 1.25rem;
+          margin-top: 1.25rem;
+          flex-shrink: 0;
         }
 
         .btn-nav {
@@ -1049,6 +1090,53 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.98); }
           to { opacity: 1; transform: scale(1); }
+        }
+
+        @media (max-width: 768px) {
+          .modal-container {
+            width: 100vw;
+            height: 100vh;
+            max-height: 100vh;
+            border-radius: 0;
+          }
+          .modal-body-layout {
+            grid-template-columns: 1fr;
+          }
+          .question-nav-sidebar {
+            max-height: 150px;
+            border-right: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          }
+          .question-nav-grid {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 0.5rem;
+          }
+          .nav-btn {
+            min-width: 44px;
+            flex-shrink: 0;
+          }
+          .option-row {
+            grid-template-columns: 1fr auto;
+            gap: 0.5rem;
+          }
+          .opt-inputs {
+            grid-column: 1 / -1;
+          }
+          .modal-footer {
+            flex-direction: column;
+            gap: 0.6rem;
+          }
+          .footer-left,
+          .footer-right {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .btn-save-all {
+            width: 100%;
+          }
         }
       `}</style>
     </div>

@@ -6,11 +6,18 @@ import { downloadPDF } from '@/lib/services/s3';
 import { extractText, Language, parseQuestions } from '@/lib/parsers/pdf-parser';
 import { Question, ManualQuestion } from '@/lib/types';
 import { translateQuestionsToHindi, extractQuestionsWithLLM, cleanGarbledHindiQuestions } from '@/lib/services/gemini';
+import { BILINGUAL_STREAK_QUESTIONS } from '@/lib/services/streak-pool';
+
+/**
+ * Helper to test if a string contains Devanagari (Hindi) characters
+ */
+function containsDevanagari(text: string): boolean {
+  return /[\u0900-\u097F]/.test(text);
+}
 
 /**
  * GET /api/exam/[seriesId]/questions?lang=en|hi
- * Fetches the test series PDF from S3, parses questions in the defined range,
- * and returns them WITHOUT answers.
+ * Fetches questions for test or quiz in the requested language (English or Hindi).
  */
 export async function GET(
   request: Request,
@@ -31,44 +38,85 @@ export async function GET(
     const url = new URL(request.url);
     const lang = (url.searchParams.get('lang') || 'en') as Language;
 
-    // Check if the parsed questions for this language are already cached
-    if (series.cachedQuestions && series.cachedQuestions[lang] && series.cachedQuestions[lang].length > 0) {
+    // 1. Direct Bilingual Questions priority (Fastest & 100% Reliable)
+    if (series.bilingualQuestions && series.bilingualQuestions.length > 0) {
+      const questions: Question[] = series.bilingualQuestions.map((q, idx) => ({
+        number: q.number || idx + 1,
+        text: (lang === 'hi' ? q.hindi?.text : q.english?.text) || q.english?.text || q.hindi?.text || '',
+        options: (lang === 'hi' ? q.hindi?.options : q.english?.options) || q.english?.options || q.hindi?.options || [],
+      }));
+
       return NextResponse.json({
         seriesId: series.id,
         seriesTitle: series.title,
         subject: series.subject,
-        totalQuestions: series.cachedQuestions[lang].length,
-        questions: series.cachedQuestions[lang],
+        totalQuestions: questions.length,
+        questions,
         testType: series.testType || (series.isRandom ? 'practice' : 'prev-year'),
         durationMinutes: series.durationMinutes || (series.isRandom ? 80 : 150),
       });
     }
 
+    // 2. Check if valid cached questions exist (ensure Hindi cache actually contains Hindi)
+    if (series.cachedQuestions && series.cachedQuestions[lang] && series.cachedQuestions[lang].length > 0) {
+      const cachedList = series.cachedQuestions[lang];
+      // For Hindi, verify cache is not contaminated with English fallback
+      const isValidHindi = lang !== 'hi' || containsDevanagari(cachedList[0]?.text || '');
+
+      if (isValidHindi) {
+        return NextResponse.json({
+          seriesId: series.id,
+          seriesTitle: series.title,
+          subject: series.subject,
+          totalQuestions: cachedList.length,
+          questions: cachedList,
+          testType: series.testType || (series.isRandom ? 'practice' : 'prev-year'),
+          durationMinutes: series.durationMinutes || (series.isRandom ? 80 : 150),
+        });
+      }
+    }
+
     let questions: Question[] = [];
 
-    if (series.bilingualQuestions && series.bilingualQuestions.length > 0) {
-      questions = series.bilingualQuestions.map((q, idx) => ({
-        number: idx + 1,
-        text: lang === 'hi' ? q.hindi.text : q.english.text,
-        options: lang === 'hi' ? q.hindi.options : q.english.options,
-      }));
-    } else if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
-      // Manual entry quiz — translate to Hindi if requested
-      let manualQs: ManualQuestion[] = series.manualQuestions;
-
-      if (lang === 'hi') {
+    if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
+      // Check if we have curated bilingual matches for this subject
+      const curatedPool = BILINGUAL_STREAK_QUESTIONS[series.subject];
+      if (lang === 'hi' && curatedPool && curatedPool.length > 0) {
+        // Try matching by English text or index
+        questions = series.manualQuestions.map((mq, idx) => {
+          const match = curatedPool.find((cq) => cq.english.text.trim().toLowerCase() === mq.text.trim().toLowerCase()) || curatedPool[idx];
+          if (match && match.hindi?.text) {
+            return {
+              number: mq.number || idx + 1,
+              text: match.hindi.text,
+              options: match.hindi.options,
+            };
+          }
+          return {
+            number: mq.number || idx + 1,
+            text: mq.text,
+            options: mq.options,
+          };
+        });
+      } else if (lang === 'hi') {
+        let manualQs: ManualQuestion[] = series.manualQuestions;
         try {
           manualQs = await translateQuestionsToHindi(manualQs);
         } catch (err) {
-          console.warn('Hindi translation failed, falling back to English:', err);
+          console.warn('Hindi translation failed:', err);
         }
+        questions = manualQs.map((q, idx) => ({
+          number: q.number || idx + 1,
+          text: q.text,
+          options: q.options,
+        }));
+      } else {
+        questions = series.manualQuestions.map((q, idx) => ({
+          number: q.number || idx + 1,
+          text: q.text,
+          options: q.options,
+        }));
       }
-
-      questions = manualQs.map((q, idx) => ({
-        number: idx + 1,
-        text: q.text,
-        options: q.options,
-      }));
     } else if (series.isRandom && series.randomQuestions) {
       // Group by S3 Key to minimize downloads
       const groupedByS3Key = new Map<string, number[]>();
@@ -83,14 +131,12 @@ export async function GET(
       const fetchPromises = Array.from(groupedByS3Key.entries()).map(async ([s3Key, nums]) => {
         const pdfBuffer = await downloadPDF(s3Key);
         const text = await extractText(pdfBuffer);
-        // Find min and max for this PDF to parse efficiently
         const start = Math.min(...nums);
         const end = Math.max(...nums);
         let parsed = parseQuestions(text, start, end, lang);
         if (lang === 'hi') {
           parsed = await cleanGarbledHindiQuestions(parsed);
         }
-        // Filter only the randomly selected ones
         const requiredSet = new Set(nums);
         return parsed.filter(q => requiredSet.has(q.number));
       });
@@ -108,24 +154,24 @@ export async function GET(
       if (lang === 'hi') {
         parsed = await cleanGarbledHindiQuestions(parsed);
       }
-      // Ensure sequential numbering 1..N regardless of PDF original numbering
       questions = parsed.map((q, idx) => ({ ...q, number: idx + 1 }));
     }
 
     if (questions.length === 0) {
       return NextResponse.json(
         {
-          error: 'No questions could be parsed from the PDF in the specified range',
-          hint: 'Check that the PDF format matches the expected question structure',
+          error: 'No questions could be parsed for this test series',
         },
         { status: 422 }
       );
     }
 
-    // Save to cache asynchronously so we don't block the response
-    updateTestSeriesCache(series.id, lang, questions).catch(err => {
-      console.error('Failed to update cache:', err);
-    });
+    // Save to cache asynchronously if valid
+    if (lang !== 'hi' || containsDevanagari(questions[0]?.text || '')) {
+      updateTestSeriesCache(series.id, lang, questions).catch(err => {
+        console.error('Failed to update cache:', err);
+      });
+    }
 
     const durationMinutes = series.isRandom
       ? (series.durationMinutes || 80)

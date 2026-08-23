@@ -1466,7 +1466,7 @@ export default function AdminForm() {
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 1000;
+          z-index: 99999;
           padding: 1rem;
         }
 
@@ -1524,6 +1524,30 @@ export default function AdminForm() {
           .dual-editor-grid,
           .format-example-grid-3 {
             grid-template-columns: 1fr;
+          }
+          .review-controls-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+          }
+          .controls-left {
+            flex-direction: column;
+            align-items: stretch;
+            width: 100%;
+          }
+          .search-input-wrapper {
+            min-width: 100%;
+            width: 100%;
+          }
+          .filter-buttons-group {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .batch-actions-right {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
           }
           .sticky-publish-bar {
             flex-direction: column;

@@ -86,16 +86,21 @@ export default function AdminPage() {
           gap: 0.5rem;
           margin-bottom: 2rem;
           border-bottom: 1px solid var(--border-subtle);
-          padding-bottom: 0.5rem;
+          padding: 0.25rem 0.25rem 0.65rem 0.25rem;
           overflow-x: auto;
           scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-tabs::-webkit-scrollbar {
+          display: none;
         }
 
         .tab-btn {
           background: none;
           border: none;
-          padding: 0.6rem 1rem;
-          font-size: 0.95rem;
+          padding: 0.55rem 0.9rem;
+          font-size: 0.92rem;
           font-weight: 700;
           color: var(--text-muted);
           cursor: pointer;
@@ -103,6 +108,7 @@ export default function AdminPage() {
           transition: all 0.2s ease;
           white-space: nowrap;
           border-radius: var(--radius-sm);
+          flex-shrink: 0;
         }
 
         .tab-btn:hover {
@@ -117,12 +123,25 @@ export default function AdminPage() {
         .tab-btn.active::after {
           content: '';
           position: absolute;
-          bottom: -0.6rem;
+          bottom: -0.65rem;
           left: 0.5rem;
           right: 0.5rem;
           height: 3px;
           background: var(--accent-gradient);
           border-radius: 3px 3px 0 0;
+        }
+
+        @media (max-width: 768px) {
+          .admin-header {
+            margin-bottom: 1.5rem;
+          }
+          .admin-description {
+            font-size: 0.88rem;
+          }
+          .tab-btn {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+          }
         }
       `}</style>
     </div>

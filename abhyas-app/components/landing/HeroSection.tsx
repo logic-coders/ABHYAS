@@ -14,8 +14,10 @@ export default function HeroSection() {
       <div className="floating-shape shape-3"></div>
 
       <div className="hero-content">
-        <h1 className="hero-title animated-gradient-text">
-          Master Your Exams<br />with <span className="highlight-abhyas">Abhyas</span>
+        <h1 className="hero-title">
+          <span className="animated-gradient-text">Master Your Exams</span>
+          <br />
+          with <span className="highlight-abhyas">Abhyas</span>
         </h1>
         <p className="hero-subtitle typewriter-fade">
           Practice with real test papers. Choose a subject, take the exam, and
@@ -126,10 +128,10 @@ export default function HeroSection() {
 
         /* Animated Typography */
         .hero-title {
-          font-size: clamp(2.5rem, 6vw, 4rem);
+          font-size: clamp(2.2rem, 5.5vw, 3.8rem);
           font-weight: 800;
-          line-height: 1.1;
-          margin-bottom: 1.5rem;
+          line-height: 1.15;
+          margin-bottom: 1.25rem;
           letter-spacing: -0.03em;
         }
         .animated-gradient-text {
@@ -140,19 +142,14 @@ export default function HeroSection() {
           animation: gradientShift 6s ease infinite;
         }
         .highlight-abhyas {
+          background: linear-gradient(135deg, #ec4899, #a855f7);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          font-weight: 900;
           position: relative;
-          display: inline-block;
-        }
-        .highlight-abhyas::after {
-          content: '';
-          position: absolute;
-          bottom: 5px;
-          left: 0;
-          width: 100%;
-          height: 12px;
-          background: rgba(236, 72, 153, 0.35);
-          z-index: -1;
-          transform: skewX(-15deg);
+          display: inline;
+          border-bottom: 3px solid rgba(236, 72, 153, 0.6);
+          padding-bottom: 2px;
         }
 
         @keyframes gradientShift {
@@ -322,11 +319,38 @@ export default function HeroSection() {
           background: var(--bg-card-hover);
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
+          .funky-hero {
+            padding: 2.5rem 1rem 3rem 1rem;
+            margin-bottom: 2rem;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .hero-title {
+            font-size: 2.1rem;
+            margin-bottom: 1rem;
+          }
+          .hero-subtitle {
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+          }
+          .logged-in-ticket-container {
+            margin-top: 1.5rem;
+            width: 100%;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          .exam-pass-card {
+            padding: 1.25rem;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+          }
           .funky-buttons {
             flex-direction: column;
             width: 100%;
-            padding: 0 2rem;
+            padding: 0;
+            box-sizing: border-box;
           }
           .glowing-wrapper {
             width: 100%;

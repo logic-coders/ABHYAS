@@ -348,6 +348,30 @@ export default function AdminStreakManager() {
           gap: 0.6rem;
           flex-wrap: wrap;
         }
+
+        @media (max-width: 640px) {
+          .streak-hero-card {
+            padding: 1.25rem;
+          }
+          .hero-top {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.4rem;
+          }
+          .hero-title {
+            font-size: 1.4rem;
+          }
+          .cycle-pills {
+            overflow-x: auto;
+            width: 100%;
+            padding-bottom: 0.5rem;
+            -webkit-overflow-scrolling: touch;
+          }
+          .action-row button,
+          .override-buttons button {
+            width: 100%;
+          }
+        }
       `}</style>
     </div>
   );
