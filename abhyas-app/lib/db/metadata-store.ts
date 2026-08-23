@@ -37,6 +37,16 @@ export async function getAllTestSeries(): Promise<TestSeriesType[]> {
   return series.map(toPlainTestSeries);
 }
 
+export async function getTestSeriesMetadata(): Promise<TestSeriesType[]> {
+  await connectToDatabase();
+  const series = await TestSeries.find({}, {
+    bilingualQuestions: 0,
+    answers: 0,
+    cachedQuestions: 0
+  }).lean();
+  return series.map(toPlainTestSeries);
+}
+
 export async function getTestSeriesById(id: string): Promise<TestSeriesType | null> {
   await connectToDatabase();
   const series = await TestSeries.findOne({ id }).lean();

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllTestSeries, addTestSeries } from '@/lib/db/metadata-store';
+import { getTestSeriesMetadata, addTestSeries } from '@/lib/db/metadata-store';
 import { TestSeries, Subject, SUBJECTS } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getUser } from '@/lib/utils/auth';
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const streakOnly = searchParams.get('streakOnly') === 'true';
 
-    let series = await getAllTestSeries();
+    let series = await getTestSeriesMetadata();
     
     if (streakOnly) {
       series = series.filter(s => s.isDailyStreak);
