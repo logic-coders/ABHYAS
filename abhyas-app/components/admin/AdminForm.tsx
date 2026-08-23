@@ -337,7 +337,6 @@ export default function AdminForm() {
                 }}
               >
                 <option value="prev-year">📜 Previous Year Paper (Full Length — 150 Qs / 150 Mins)</option>
-                <option value="practice">🎯 Practice Simulation (80 Mins)</option>
                 <option value="quiz">⚡ Speed Quiz (30s per Question)</option>
               </select>
             </div>

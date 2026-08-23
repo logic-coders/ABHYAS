@@ -5,9 +5,11 @@ import { Subject, SUBJECTS, SUBJECT_ICONS } from '@/lib/types';
 interface SubjectFilterProps {
   selected: Subject | 'All';
   onChange: (subject: Subject | 'All') => void;
+  /** Override the subject list. Defaults to SUBJECTS. Pass PRACTICE_SUBJECTS for the Practice page. */
+  subjects?: Subject[];
 }
 
-export default function SubjectFilter({ selected, onChange }: SubjectFilterProps) {
+export default function SubjectFilter({ selected, onChange, subjects = SUBJECTS }: SubjectFilterProps) {
   return (
     <div className="subject-filter">
       <button
@@ -16,12 +18,12 @@ export default function SubjectFilter({ selected, onChange }: SubjectFilterProps
       >
         🎯 All
       </button>
-      {SUBJECTS.map((subject) => (
+      {subjects.map((subject) => (
         <button
           key={subject}
           className={`filter-pill ${selected === subject ? 'filter-pill-active' : ''}`}
           onClick={() => onChange(subject)}
-          data-subject={subject.toLowerCase()}
+          data-subject={subject.toLowerCase().replace(/ /g, '-')}
         >
           {SUBJECT_ICONS[subject]} {subject}
         </button>

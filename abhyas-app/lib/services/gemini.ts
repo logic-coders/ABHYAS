@@ -6,7 +6,7 @@
  * Uses Google Gemini API (free tier) to conserve resources.
  */
 
-import { ManualQuestion, Subject, Question } from '@/lib/types';
+import { ManualQuestion, Subject, Question, BilingualQuestion } from '@/lib/types';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
@@ -344,3 +344,165 @@ Rules:
     correctAnswer: q.correctAnswer,
   }));
 }
+
+/**
+ * Builds subject-specific STET/BPSC TRE-level prompt guidance for practice test generation.
+ */
+function getPracticeSubjectGuidance(subject: string): string {
+  switch (subject) {
+    case 'Modern History':
+      return `CRITICAL: Every question MUST be from Modern Indian History (1757–1947).
+Topics: Revolt of 1857, Indian Freedom Struggle, Socio-Religious Reform Movements (Brahmo Samaj, Arya Samaj, Ramakrishna Mission, Aligarh Movement), INC Sessions (1885–1947), Partition of Bengal (1905), Swadeshi & Boycott, Home Rule League, Rowlatt Act, Jallianwala Bagh, Non-Cooperation Movement, Khilafat, Simon Commission, Dandi March, Quit India 1942, INA & Subhash Chandra Bose, Independence 1947, British Viceroys, Revolutionary fighters.
+DO NOT include Ancient, Medieval, or World History questions.`;
+    case 'Indian Geography':
+      return `CRITICAL: ALL questions must be about Indian Geography only.
+Topics: Indian states and capitals, rivers and tributaries (Ganga, Yamuna, Brahmaputra, Godavari, Krishna, Kaveri), mountain ranges (Himalayas, Aravalli, Vindhya, Sahyadri), Deccan Plateau, soil types (alluvial, black cotton, laterite, red), climate zones and monsoon patterns, national parks and wildlife sanctuaries (Jim Corbett, Kaziranga, Sundarbans, Gir), minerals and mining regions, agriculture (wheat, rice, cotton, jute belts), coastal geography, islands (Andaman & Nicobar, Lakshadweep), Indian ocean and Bay of Bengal features.
+DO NOT include any world geography questions.`;
+    case 'Global Geography':
+      return `CRITICAL: ALL questions must be about World/Global Geography.
+Topics: World continents and oceans, world capitals, longest rivers (Nile, Amazon, Yangtze, Mississippi), highest mountains (Everest, K2, Kangchenjunga), world deserts (Sahara, Gobi, Arabian, Atacama), climate zones (tropical, temperate, polar), ocean currents, world time zones, international boundaries and border disputes, major straits and channels (Strait of Gibraltar, Bosphorus, Malacca, Palk Strait), continents geography, island nations, world seas and gulfs, tectonic plates and earthquakes, trade winds and cyclone regions.
+DO NOT include any India-specific geography questions.`;
+    case 'Science':
+      return `Topics for STET/BPSC TRE Science: Physics (motion, force, light, sound, electricity, magnetism, heat), Chemistry (elements, compounds, mixtures, acids-bases-salts, chemical reactions, periodic table, carbon chemistry), Biology (cell structure, human body systems — digestive, respiratory, circulatory, nervous, skeletal — plant physiology, nutrition, diseases and pathogens, ecology and food chains). Match difficulty to Bihar STET Paper II level.`;
+    case 'Math':
+      return `Topics for STET/BPSC TRE Mathematics: Number System, HCF & LCM, Fractions & Decimals, Percentage, Profit & Loss, Ratio & Proportion, Simple & Compound Interest, Time & Work, Time & Distance, Average, Algebra (linear equations), Geometry (triangles, circles, quadrilaterals), Mensuration (area, volume), Statistics (mean, median, mode). Match difficulty to BPSC TRE Math level.`;
+    case 'Music':
+      return `Topics for STET/BPSC TRE Music: Classical Music theory (Ragas, Talas, Swaras — Sa Re Ga Ma Pa Dha Ni), Hindustani and Carnatic traditions, famous classical musicians (Tansen, Bismillah Khan, Ravi Shankar, Lata Mangeshkar, MS Subbulakshmi), musical instruments (classification — string/wind/percussion/keyboard), Music Gharanas (Gwalior, Kirana, Agra, Patiala, Jaipur-Atrauli), film music history, folk music of different states, UNESCO intangible cultural heritage in Indian music.`;
+    case 'English':
+      return `Topics for STET/BPSC TRE English: Grammar (parts of speech, tenses, active-passive voice, direct-indirect speech, subject-verb agreement), Vocabulary (synonyms, antonyms, one-word substitutions, idioms and phrases), Reading Comprehension, Spotting Errors, Sentence Improvement, Fill in the Blanks, Literature (Shakespeare, John Milton, Charles Dickens, George Orwell, Rabindranath Tagore works in English). Match STET/BPSC TRE difficulty.`;
+    case 'Hindi':
+      return `Topics for STET/BPSC TRE Hindi: Hindi Grammar (संज्ञा, सर्वनाम, विशेषण, क्रिया, काल, वाच्य, समास, संधि, अलंकार, रस, छंद), Vocabulary (पर्यायवाची, विलोम, मुहावरे, लोकोक्तियाँ), Hindi Literature (Kabir, Tulsidas, Surdas, Premchand, Mahadevi Verma, Jai Shankar Prasad, Ramdhari Singh 'Dinkar'), Apathit Gadyansh. Match Bihar STET Hindi Paper II difficulty.`;
+    case 'Geography':
+      return `Topics: Indian geography, world geography, physical geography, human geography — broad coverage suitable for STET/BPSC TRE level.`;
+    default:
+      return `Questions should cover a broad range of important topics within ${subject} at STET/BPSC TRE difficulty level.`;
+  }
+}
+
+/**
+ * Generate 80 STET/BPSC TRE-level practice test questions for the given subject using Gemini AI.
+ * Returns bilingual (English + Hindi) BilingualQuestion[] with 5 options (a–e) and correct answers.
+ * Generation happens in two passes: English first, then Hindi translation.
+ */
+export async function generatePracticeTestQuestions(subject: string): Promise<BilingualQuestion[]> {
+  const TOTAL_QUESTIONS = 80;
+  const BATCH_SIZE = 20; // Generate 4 batches of 20 to stay within token limits
+  const subjectGuidance = getPracticeSubjectGuidance(subject);
+
+  // --- Pass 1: Generate 80 English questions in 4 batches ---
+  const englishBatches: ManualQuestion[][] = [];
+
+  for (let batch = 0; batch < 4; batch++) {
+    const startNum = batch * BATCH_SIZE + 1;
+    const endNum = startNum + BATCH_SIZE - 1;
+
+    const prompt = `You are an expert exam question creator for STET (State Teacher Eligibility Test) and BPSC TRE (Bihar Public Service Commission Teacher Recruitment Exam) in India.
+
+Generate exactly ${BATCH_SIZE} multiple-choice questions for the subject: "${subject}".
+These are questions ${startNum} to ${endNum} in a ${TOTAL_QUESTIONS}-question practice test.
+
+DIFFICULTY & PATTERN REQUIREMENTS:
+- Match the difficulty and style of real STET Paper II and BPSC TRE exam questions.
+- Questions should test factual recall, conceptual understanding, and application — not trivial general knowledge.
+- Use 5 options labeled a, b, c, d, e (not A, B, C, D) with one correct answer.
+- The correct answer key must be one of: "a", "b", "c", "d", "e" (lowercase).
+- Plausible distractors — incorrect options should be reasonable, not obviously wrong.
+
+SUBJECT GUIDANCE:
+${subjectGuidance}
+
+Return ONLY a valid JSON array (no markdown, no code fences, no extra text):
+[
+  {
+    "number": ${startNum},
+    "text": "Question text here?",
+    "options": ["a. Option 1", "b. Option 2", "c. Option 3", "d. Option 4", "e. Option 5"],
+    "correctAnswer": "b"
+  }
+]
+
+Rules:
+- Exactly ${BATCH_SIZE} questions numbered ${startNum} to ${endNum}
+- correctAnswer MUST be lowercase: "a", "b", "c", "d", or "e"
+- No duplicate questions
+- No trivially easy questions
+- All questions must be factually accurate`;
+
+    const rawResponse = await callGemini(prompt);
+    let jsonStr = rawResponse;
+    const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
+    if (jsonMatch) jsonStr = jsonMatch[0];
+
+    const batch_questions: ManualQuestion[] = JSON.parse(jsonStr);
+    if (!Array.isArray(batch_questions) || batch_questions.length < 15) {
+      throw new Error(`Batch ${batch + 1} returned only ${batch_questions?.length || 0} questions`);
+    }
+
+    // Renumber to ensure correct sequential numbering
+    const renumbered = batch_questions.slice(0, BATCH_SIZE).map((q, i) => ({
+      number: startNum + i,
+      text: q.text,
+      options: (q.options || []).slice(0, 5),
+      correctAnswer: (q.correctAnswer || 'a').toLowerCase(),
+    }));
+
+    englishBatches.push(renumbered);
+  }
+
+  // Flatten all 80 English questions
+  const allEnglishQuestions: ManualQuestion[] = englishBatches.flat();
+
+  // --- Pass 2: Translate to Hindi in parallel chunks ---
+  const TRANSLATE_CHUNK = 20;
+  const translationPromises: Promise<ManualQuestion[]>[] = [];
+
+  for (let i = 0; i < allEnglishQuestions.length; i += TRANSLATE_CHUNK) {
+    const chunk = allEnglishQuestions.slice(i, i + TRANSLATE_CHUNK);
+
+    const translatePrompt = `You are an expert academic translator specializing in Indian competitive exams (STET and BPSC TRE).
+Translate the following multiple-choice questions from English to Hindi.
+
+Rules:
+1. Translate question text and all option text into formal academic Hindi (शुद्ध हिंदी).
+2. Keep option labels (a., b., c., d., e.) intact.
+3. Preserve all numbers, equations, proper nouns, and technical terms (like compound names) exactly as-is.
+4. Do NOT translate the "correctAnswer" or "number" fields.
+5. Return ONLY the same JSON structure, no markdown, no extra text.
+
+JSON to translate:
+${JSON.stringify(chunk, null, 2)}`;
+
+    translationPromises.push(
+      callGemini(translatePrompt).then((raw) => {
+        let jsonStr = raw;
+        const m = raw.match(/\[[\s\S]*\]/);
+        if (m) jsonStr = m[0];
+        return JSON.parse(jsonStr) as ManualQuestion[];
+      })
+    );
+  }
+
+  const hindiChunks = await Promise.all(translationPromises);
+  const allHindiQuestions: ManualQuestion[] = hindiChunks.flat();
+
+  // --- Pass 3: Merge into BilingualQuestion[] ---
+  const bilingualQuestions: BilingualQuestion[] = allEnglishQuestions.map((enQ, idx) => {
+    const hiQ = allHindiQuestions[idx];
+    return {
+      number: enQ.number,
+      english: {
+        text: enQ.text,
+        options: (enQ.options || []).slice(0, 5),
+      },
+      hindi: {
+        text: hiQ?.text || enQ.text,
+        options: (hiQ?.options || enQ.options || []).slice(0, 5),
+      },
+      correctAnswer: (enQ.correctAnswer || 'a').toLowerCase(),
+      status: 'verified' as const,
+    };
+  });
+
+  return bilingualQuestions;
+}
+

@@ -1,6 +1,6 @@
 import { Subject, ManualQuestion, BilingualQuestion } from '@/lib/types';
 
-export const BILINGUAL_STREAK_QUESTIONS: Record<Subject, BilingualQuestion[]> = {
+export const BILINGUAL_STREAK_QUESTIONS: Partial<Record<Subject, BilingualQuestion[]>> = {
   Music: [
     {
       number: 1,
@@ -1838,14 +1838,14 @@ export const BILINGUAL_STREAK_QUESTIONS: Record<Subject, BilingualQuestion[]> = 
 };
 
 // Derived English-only representation for backward compatibility
-export const CURATED_STREAK_QUESTIONS: Record<Subject, ManualQuestion[]> = Object.fromEntries(
+export const CURATED_STREAK_QUESTIONS: Partial<Record<Subject, ManualQuestion[]>> = Object.fromEntries(
   Object.entries(BILINGUAL_STREAK_QUESTIONS).map(([subj, qs]) => [
     subj as Subject,
-    qs.map((q) => ({
+    (qs || []).map((q) => ({
       number: q.number,
       text: q.english.text,
       options: q.english.options,
       correctAnswer: q.correctAnswer || 'A',
     })),
   ])
-) as Record<Subject, ManualQuestion[]>;
+) as Partial<Record<Subject, ManualQuestion[]>>;

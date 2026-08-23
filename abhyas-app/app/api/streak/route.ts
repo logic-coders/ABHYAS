@@ -60,7 +60,7 @@ export async function GET() {
         console.log(`✅ Auto-generated ${bilingualQuestions.length} bilingual AI questions for streak (${todaySubject})`);
       } catch (aiError) {
         console.warn('⚠️ AI generation failed during auto-gen, using curated bilingual pool:', aiError);
-        const curatedList = BILINGUAL_STREAK_QUESTIONS[todaySubject] || BILINGUAL_STREAK_QUESTIONS.Music;
+        const curatedList = (BILINGUAL_STREAK_QUESTIONS[todaySubject] || BILINGUAL_STREAK_QUESTIONS.Music) as NonNullable<typeof BILINGUAL_STREAK_QUESTIONS.Music>;
         const shuffled = [...curatedList].sort(() => 0.5 - Math.random());
         bilingualQuestions = shuffled.slice(0, 20).map((q, idx) => ({
           ...q,

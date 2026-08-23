@@ -33,13 +33,13 @@ export default function AdminPage() {
           className={`tab-btn ${activeTab === 'tests' ? 'active' : ''}`}
           onClick={() => setActiveTab('tests')}
         >
-          📝 Create Test
+          📝 Create PY Test
         </button>
         <button 
           className={`tab-btn ${activeTab === 'quiz' ? 'active' : ''}`}
           onClick={() => setActiveTab('quiz')}
         >
-          ⚡ Create Quiz
+          ⚡ Create Practice Test
         </button>
         <button 
           className={`tab-btn ${activeTab === 'streak' ? 'active' : ''}`}

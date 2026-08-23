@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       console.warn('⚠️ AI generation failed or skipped, using curated bilingual pool:', aiError);
       generationMethod = 'curated';
 
-      const curatedList = BILINGUAL_STREAK_QUESTIONS[rotatingSubject] || BILINGUAL_STREAK_QUESTIONS.Music;
+      const curatedList = (BILINGUAL_STREAK_QUESTIONS[rotatingSubject] || BILINGUAL_STREAK_QUESTIONS.Music) as NonNullable<typeof BILINGUAL_STREAK_QUESTIONS.Music>;
       const shuffled = [...curatedList].sort(() => 0.5 - Math.random());
       bilingualQuestions = shuffled.slice(0, 20).map((q, idx) => ({
         ...q,

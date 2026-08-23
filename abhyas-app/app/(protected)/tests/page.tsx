@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { TestSeries, Subject, SUBJECTS } from '@/lib/types';
+import { TestSeries, Subject, PRACTICE_SUBJECTS } from '@/lib/types';
 import SubjectFilter from '@/components/exam/SubjectFilter';
 import TestSeriesCard from '@/components/exam/TestSeriesCard';
 
@@ -62,7 +62,7 @@ export default function TestsPage() {
             </p>
           </div>
           <div className="banner-actions">
-            {SUBJECTS.map((subj) => (
+            {PRACTICE_SUBJECTS.map((subj) => (
               <button
                 key={subj}
                 className="btn btn-instant-quiz"
@@ -77,7 +77,7 @@ export default function TestsPage() {
       </section>
 
       {/* Subject Filter */}
-      <SubjectFilter selected={selectedSubject} onChange={setSelectedSubject} />
+      <SubjectFilter selected={selectedSubject} onChange={setSelectedSubject} subjects={PRACTICE_SUBJECTS} />
 
       {/* Content Grid */}
       {isLoading ? (

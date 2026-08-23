@@ -1,14 +1,43 @@
 /* ─── Shared TypeScript types for Abhyas ─── */
 
-export type Subject = 'Music' | 'Math' | 'Modern History' | 'Geography' | 'Science' | 'English' | 'Hindi';
+/**
+ * All subjects in the system.
+ * 'Geography' is kept for backward-compatibility with Prev Year tests stored in DB.
+ * 'Indian Geography' and 'Global Geography' are for the Practice section only.
+ */
+export type Subject =
+  | 'Music'
+  | 'Math'
+  | 'Modern History'
+  | 'Geography'
+  | 'Indian Geography'
+  | 'Global Geography'
+  | 'Science'
+  | 'English'
+  | 'Hindi';
 
+/** Subjects used in Prev Year page and general admin TXT uploader (single Geography) */
 export const SUBJECTS: Subject[] = ['Music', 'Math', 'Modern History', 'Geography', 'Science', 'English', 'Hindi'];
+
+/** Subjects used in Practice page, Quiz banner, and AI Practice generator (Geography split into two) */
+export const PRACTICE_SUBJECTS: Subject[] = [
+  'Music',
+  'Math',
+  'Modern History',
+  'Indian Geography',
+  'Global Geography',
+  'Science',
+  'English',
+  'Hindi',
+];
 
 export const SUBJECT_ICONS: Record<Subject, string> = {
   Music: '🎵',
   Math: '📐',
   'Modern History': '📜',
   Geography: '🌍',
+  'Indian Geography': '🗺️',
+  'Global Geography': '🌐',
   Science: '🔬',
   English: '📖',
   Hindi: '✍️',
@@ -19,6 +48,8 @@ export const SUBJECT_COLORS: Record<Subject, string> = {
   Math: '#3b82f6',
   'Modern History': '#f59e0b',
   Geography: '#10b981',
+  'Indian Geography': '#059669',
+  'Global Geography': '#0891b2',
   Science: '#06b6d4',
   English: '#ec4899',
   Hindi: '#f97316',
