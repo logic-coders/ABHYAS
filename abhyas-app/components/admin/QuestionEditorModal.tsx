@@ -1094,7 +1094,7 @@ export default function QuestionEditorModal({ test, onClose, onSaved }: Question
 
         @media (max-width: 768px) {
           .modal-container {
-            width: 100vw;
+            width: 100%;
             height: 100vh;
             max-height: 100vh;
             border-radius: 0;

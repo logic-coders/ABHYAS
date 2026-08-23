@@ -51,6 +51,7 @@ export async function POST(
         number: idx + 1,
         text: lang === 'hi' ? q.hindi.text : q.english.text,
         options: lang === 'hi' ? q.hindi.options : q.english.options,
+        explanation: lang === 'hi' ? (q.hindi.explanation || q.english.explanation) : q.english.explanation,
       }));
 
       series.bilingualQuestions.forEach((q, idx) => {
@@ -69,6 +70,7 @@ export async function POST(
           number: idx + 1,
           text: q.text,
           options: q.options,
+          explanation: q.explanation,
         }));
       }
 
@@ -222,6 +224,7 @@ export async function POST(
         userAnswer: userAns || '—',
         correctAnswer: correctAns,
         isCorrect,
+        explanation: q.explanation,
       });
     }
 

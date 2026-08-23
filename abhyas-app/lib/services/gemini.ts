@@ -9,6 +9,7 @@
 import { ManualQuestion, Subject, Question, BilingualQuestion } from '@/lib/types';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
 
 interface GeminiResponse {
@@ -20,9 +21,49 @@ interface GeminiResponse {
 }
 
 /**
- * Calls Gemini API with a prompt and returns the text response.
+ * Calls OpenAI API (gpt-4o-mini)
  */
-async function callGemini(prompt: string): Promise<string> {
+async function callOpenAIInternal(prompt: string): Promise<string> {
+  if (!OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`
+    },
+    cache: 'no-store',
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+    }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error('OpenAI API error:', res.status, errBody);
+    const err = new Error(`OpenAI API error: ${res.status}`);
+    (err as any).status = res.status;
+    throw err;
+  }
+
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content;
+
+  if (!text) {
+    throw new Error('No text in OpenAI response');
+  }
+
+  return text.trim();
+}
+
+/**
+ * Calls Gemini API
+ */
+async function callGeminiInternal(prompt: string): Promise<string> {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
@@ -44,7 +85,9 @@ async function callGemini(prompt: string): Promise<string> {
   if (!res.ok) {
     const errBody = await res.text();
     console.error('Gemini API error:', res.status, errBody);
-    throw new Error(`Gemini API error: ${res.status}`);
+    const err = new Error(`Gemini API error: ${res.status}`);
+    (err as any).status = res.status;
+    throw err;
   }
 
   const data: GeminiResponse = await res.json();
@@ -55,6 +98,49 @@ async function callGemini(prompt: string): Promise<string> {
   }
 
   return text.trim();
+}
+
+// Global state to track which provider is currently active
+let activeProvider: 'gemini' | 'openai' = GEMINI_API_KEY ? 'gemini' : 'openai';
+
+/**
+ * Calls the active AI provider.
+ * Automatically swaps to the other provider if a 429 Rate Limit error is hit.
+ */
+export async function callGemini(prompt: string): Promise<string> {
+  if (!GEMINI_API_KEY && !OPENAI_API_KEY) {
+    throw new Error('Neither GEMINI_API_KEY nor OPENAI_API_KEY is configured');
+  }
+
+  try {
+    if (activeProvider === 'openai') {
+      return await callOpenAIInternal(prompt);
+    } else {
+      return await callGeminiInternal(prompt);
+    }
+  } catch (err: any) {
+    // If it's a rate limit error (429), try swapping
+    if (err.status === 429 || err.message?.includes('429')) {
+      const otherProvider = activeProvider === 'gemini' ? 'openai' : 'gemini';
+      
+      // Only swap if we actually have the key for the other provider
+      const hasKeyForOther = otherProvider === 'gemini' ? !!GEMINI_API_KEY : !!OPENAI_API_KEY;
+      
+      if (hasKeyForOther) {
+        console.log(`⚠️ Rate limit (429) hit on ${activeProvider}. Auto-swapping to ${otherProvider} API...`);
+        activeProvider = otherProvider;
+        
+        if (activeProvider === 'openai') {
+          return await callOpenAIInternal(prompt);
+        } else {
+          return await callGeminiInternal(prompt);
+        }
+      }
+    }
+    
+    // Rethrow if it wasn't a 429 or if we don't have the key for the other provider
+    throw err;
+  }
 }
 
 /**
@@ -301,13 +387,14 @@ Each question should be at an intermediate difficulty level, suitable for compet
 
 ${subjectGuidance}
 
-Return ONLY a valid JSON array (no markdown, no code fences, no explanation):
+Return ONLY a valid JSON array (no markdown, no code fences, no extra text):
 [
   {
     "number": 1,
     "text": "Question text here",
     "options": ["A. Option 1", "B. Option 2", "C. Option 3", "D. Option 4"],
-    "correctAnswer": "B"
+    "correctAnswer": "B",
+    "explanation": "A brief, 1-2 sentence explanation in simple language clarifying why the correct answer is right."
   },
   ...
 ]
@@ -342,6 +429,7 @@ Rules:
     text: q.text,
     options: q.options.slice(0, 4),
     correctAnswer: q.correctAnswer,
+    explanation: q.explanation || 'No explanation provided.',
   }));
 }
 
@@ -417,7 +505,8 @@ Return ONLY a valid JSON array (no markdown, no code fences, no extra text):
     "number": ${startNum},
     "text": "Question text here?",
     "options": ["a. Option 1", "b. Option 2", "c. Option 3", "d. Option 4", "e. Option 5"],
-    "correctAnswer": "b"
+    "correctAnswer": "b",
+    "explanation": "A short, 1-2 sentence explanation of why the correct answer is right."
   }
 ]
 
@@ -444,6 +533,7 @@ Rules:
       text: q.text,
       options: (q.options || []).slice(0, 5),
       correctAnswer: (q.correctAnswer || 'a').toLowerCase(),
+      explanation: q.explanation || 'No explanation provided.',
     }));
 
     englishBatches.push(renumbered);
@@ -463,7 +553,7 @@ Rules:
 Translate the following multiple-choice questions from English to Hindi.
 
 Rules:
-1. Translate question text and all option text into formal academic Hindi (शुद्ध हिंदी).
+1. Translate question text, all option text, and the explanation into formal academic Hindi (शुद्ध हिंदी).
 2. Keep option labels (a., b., c., d., e.) intact.
 3. Preserve all numbers, equations, proper nouns, and technical terms (like compound names) exactly as-is.
 4. Do NOT translate the "correctAnswer" or "number" fields.
@@ -493,10 +583,12 @@ ${JSON.stringify(chunk, null, 2)}`;
       english: {
         text: enQ.text,
         options: (enQ.options || []).slice(0, 5),
+        explanation: enQ.explanation,
       },
       hindi: {
         text: hiQ?.text || enQ.text,
         options: (hiQ?.options || enQ.options || []).slice(0, 5),
+        explanation: hiQ?.explanation || enQ.explanation,
       },
       correctAnswer: (enQ.correctAnswer || 'a').toLowerCase(),
       status: 'verified' as const,

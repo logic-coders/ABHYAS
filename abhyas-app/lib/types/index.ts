@@ -63,6 +63,7 @@ export interface ManualQuestion {
   text: string;
   options: string[]; // ["A. ...", "B. ...", "C. ...", "D. ..."]
   correctAnswer: string; // "A" | "B" | "C" | "D"
+  explanation?: string;
 }
 
 export interface BilingualQuestion {
@@ -70,10 +71,12 @@ export interface BilingualQuestion {
   english: {
     text: string;
     options: string[];
+    explanation?: string;
   };
   hindi: {
     text: string;
     options: string[];
+    explanation?: string;
   };
   correctAnswer?: string;
   status?: 'verified' | 'warning' | 'error';
@@ -108,6 +111,7 @@ export interface Question {
   number: number;
   text: string;
   options: string[];
+  explanation?: string;
 }
 
 export interface ExamAnswer {
@@ -122,6 +126,7 @@ export interface ResultItem {
   userAnswer: string;
   correctAnswer: string;
   isCorrect: boolean;
+  explanation?: string;
 }
 
 export interface ExamResult {

@@ -29,6 +29,7 @@ function toPlainResult(doc: any): TestResultSummary {
         userAnswer: item.userAnswer,
         correctAnswer: item.correctAnswer,
         isCorrect: Boolean(item.isCorrect),
+        explanation: item.explanation,
       }))
     : undefined;
 

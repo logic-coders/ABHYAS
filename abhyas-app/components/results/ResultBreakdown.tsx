@@ -112,6 +112,11 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
                     );
                   })}
                 </div>
+                {item.explanation && item.explanation !== 'No explanation provided.' && (
+                  <div className="detail-explanation">
+                    <strong>Explanation:</strong> {item.explanation}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -312,6 +317,23 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
           color: #ef4444;
           background: rgba(239, 68, 68, 0.2);
           border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .detail-explanation {
+          margin-top: 1rem;
+          padding: 1rem;
+          background: rgba(16, 185, 129, 0.05);
+          border-left: 3px solid #10b981;
+          border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+          color: var(--text-color);
+          font-size: 0.95rem;
+          line-height: 1.6;
+        }
+
+        .detail-explanation strong {
+          color: #10b981;
+          font-weight: 700;
+          margin-right: 0.3rem;
         }
 
         @media (max-width: 640px) {
