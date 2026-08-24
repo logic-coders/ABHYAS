@@ -5,6 +5,7 @@ const ManualQuestionSchema = new mongoose.Schema({
   text: { type: String, required: true },
   options: [{ type: String }],
   correctAnswer: { type: String, required: true },
+  explanation: { type: String },
 }, { _id: false });
 
 const BilingualQuestionSchema = new mongoose.Schema({
@@ -12,10 +13,12 @@ const BilingualQuestionSchema = new mongoose.Schema({
   english: {
     text: { type: String, required: true },
     options: [{ type: String }],
+    explanation: { type: String },
   },
   hindi: {
     text: { type: String, required: true },
     options: [{ type: String }],
+    explanation: { type: String },
   },
   correctAnswer: { type: String },
   status: { type: String },

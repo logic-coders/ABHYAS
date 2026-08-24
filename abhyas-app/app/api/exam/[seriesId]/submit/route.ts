@@ -51,7 +51,8 @@ export async function POST(
         number: idx + 1,
         text: lang === 'hi' ? q.hindi.text : q.english.text,
         options: lang === 'hi' ? q.hindi.options : q.english.options,
-        explanation: lang === 'hi' ? (q.hindi.explanation || q.english.explanation) : q.english.explanation,
+        // For Hindi: only use Hindi explanation (don't silently mix languages)
+        explanation: lang === 'hi' ? q.hindi.explanation : q.english.explanation,
       }));
 
       series.bilingualQuestions.forEach((q, idx) => {
@@ -61,10 +62,12 @@ export async function POST(
         }
       });
     }
-    // Case B: Manual Questions (Speed Quiz, Daily Streak Quiz, Manual Entry)
     else if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
       if (series.cachedQuestions && series.cachedQuestions[lang] && series.cachedQuestions[lang].length > 0) {
-        questions = series.cachedQuestions[lang];
+        questions = series.cachedQuestions[lang].map((q, idx) => ({
+          ...q,
+          explanation: series.manualQuestions[idx]?.explanation || q.explanation,
+        }));
       } else {
         questions = series.manualQuestions.map((q, idx) => ({
           number: idx + 1,

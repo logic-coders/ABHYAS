@@ -394,7 +394,7 @@ Return ONLY a valid JSON array (no markdown, no code fences, no extra text):
     "text": "Question text here",
     "options": ["A. Option 1", "B. Option 2", "C. Option 3", "D. Option 4"],
     "correctAnswer": "B",
-    "explanation": "A brief, 1-2 sentence explanation in simple language clarifying why the correct answer is right."
+    "explanation": "A detailed, full explanation in simple language clarifying why the correct answer is right, providing relevant historical, scientific, or mathematical context and why other key options are incorrect."
   },
   ...
 ]
@@ -506,7 +506,7 @@ Return ONLY a valid JSON array (no markdown, no code fences, no extra text):
     "text": "Question text here?",
     "options": ["a. Option 1", "b. Option 2", "c. Option 3", "d. Option 4", "e. Option 5"],
     "correctAnswer": "b",
-    "explanation": "A short, 1-2 sentence explanation of why the correct answer is right."
+    "explanation": "A detailed, full explanation in simple language clarifying why the correct answer is right, providing relevant historical, scientific, or mathematical context and why other key options are incorrect."
   }
 ]
 
