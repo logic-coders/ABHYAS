@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getAllTestSeries, addTestSeries } from '@/lib/db/metadata-store';
+import { getAllTestSeries, addTestSeries, addGeneratedQuestionHistory } from '@/lib/db/metadata-store';
+import { normalizeForFingerprint } from '@/lib/services/gemini';
 import { Subject, TestSeries, BilingualQuestion } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentUser } from '@/lib/utils/auth';
@@ -85,6 +86,12 @@ export async function POST(request: NextRequest) {
     };
 
     await addTestSeries(newTest);
+
+    // 5. Record question fingerprints + sample texts for future dedup
+    const newFingerprints = finalQuestions.map(q => normalizeForFingerprint(q.english.text));
+    const newSampleTexts = finalQuestions.map(q => q.english.text);
+    await addGeneratedQuestionHistory(subject, newFingerprints, newSampleTexts);
+    console.log(`📝 Recorded ${newFingerprints.length} question fingerprints for "${subject}" dedup history.`);
 
     return NextResponse.json(
       {

@@ -467,22 +467,133 @@ DO NOT include any India-specific geography questions.`;
   }
 }
 
+// ── Question Dedup Utilities ──
+
+/**
+ * Normalise question text into a compact fingerprint string.
+ * Strips punctuation, extra whitespace, lowercases, and trims option labels.
+ */
+export function normalizeForFingerprint(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/^q\d+[.:)\s]*/i, '')           // strip leading "Q1." etc.
+    .replace(/[^a-z0-9\u0900-\u097F\s]/g, '') // keep letters, digits, Hindi unicode, spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Extract word-level bigrams from a string for Jaccard similarity.
+ */
+function getWordBigrams(text: string): Set<string> {
+  const words = text.split(' ').filter(Boolean);
+  const bigrams = new Set<string>();
+  for (let i = 0; i < words.length - 1; i++) {
+    bigrams.add(`${words[i]} ${words[i + 1]}`);
+  }
+  // Also add single words as unigrams for very short questions
+  if (words.length <= 4) {
+    words.forEach(w => bigrams.add(w));
+  }
+  return bigrams;
+}
+
+/**
+ * Jaccard similarity between two sets of bigrams (0..1).
+ */
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 && b.size === 0) return 1;
+  let intersection = 0;
+  for (const item of a) {
+    if (b.has(item)) intersection++;
+  }
+  const union = a.size + b.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+/**
+ * Check a batch of new questions against historical fingerprints.
+ * Returns { clean, duplicateIndices } where duplicateIndices are 0-based
+ * indices of questions that are too similar to previously generated ones.
+ *
+ * Threshold: Jaccard ≥ 0.85 on word bigrams = duplicate.
+ */
+export function findDuplicateQuestions(
+  newQuestions: ManualQuestion[],
+  historicalFingerprints: string[]
+): { duplicateIndices: number[] } {
+  const SIMILARITY_THRESHOLD = 0.85;
+
+  // Pre-compute bigrams for all historical fingerprints
+  const histBigrams = historicalFingerprints.map(fp => getWordBigrams(fp));
+  const histFpSet = new Set(historicalFingerprints);
+
+  const duplicateIndices: number[] = [];
+
+  for (let i = 0; i < newQuestions.length; i++) {
+    const fp = normalizeForFingerprint(newQuestions[i].text);
+
+    // Fast exact match check
+    if (histFpSet.has(fp)) {
+      duplicateIndices.push(i);
+      continue;
+    }
+
+    // Bigram similarity check against all historical
+    const newBigrams = getWordBigrams(fp);
+    let isDuplicate = false;
+    for (const hb of histBigrams) {
+      if (jaccardSimilarity(newBigrams, hb) >= SIMILARITY_THRESHOLD) {
+        isDuplicate = true;
+        break;
+      }
+    }
+    if (isDuplicate) {
+      duplicateIndices.push(i);
+    }
+  }
+
+  return { duplicateIndices };
+}
+
 /**
  * Generate 80 STET/BPSC TRE-level practice test questions for the given subject using Gemini AI.
  * Returns bilingual (English + Hindi) BilingualQuestion[] with 5 options (a–e) and correct answers.
  * Generation happens in two passes: English first, then Hindi translation.
+ *
+ * @param subject - The subject to generate questions for
+ * @param previousQuestionTexts - Sample texts from previously generated tests (for prompt injection)
+ * @param historicalFingerprints - Normalised fingerprints of all previously generated questions (for post-gen dedup)
  */
-export async function generatePracticeTestQuestions(subject: string): Promise<BilingualQuestion[]> {
+export async function generatePracticeTestQuestions(
+  subject: string,
+  previousQuestionTexts?: string[],
+  historicalFingerprints?: string[]
+): Promise<BilingualQuestion[]> {
   const TOTAL_QUESTIONS = 80;
   const BATCH_SIZE = 20; // Generate 4 batches of 20 to stay within token limits
   const subjectGuidance = getPracticeSubjectGuidance(subject);
 
+  // Build "previously generated" context for prompt injection (cap at ~120 to stay within token limits)
+  const prevTexts = (previousQuestionTexts || []).slice(0, 120);
+  const previousQuestionsBlock = prevTexts.length > 0
+    ? `\n\nPREVIOUSLY GENERATED QUESTIONS — DO NOT REPEAT OR PARAPHRASE ANY OF THESE:\n${prevTexts.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n\nYou MUST generate entirely NEW and DIFFERENT questions that do not overlap with the above list. Cover different sub-topics, use different framing, and ask about different facts.\n`
+    : '';
+
   // --- Pass 1: Generate 80 English questions in 4 batches ---
   const englishBatches: ManualQuestion[][] = [];
+
+  // Track questions generated within this run to avoid intra-batch duplicates
+  const thisRunQuestionTexts: string[] = [];
 
   for (let batch = 0; batch < 4; batch++) {
     const startNum = batch * BATCH_SIZE + 1;
     const endNum = startNum + BATCH_SIZE - 1;
+
+    // Build intra-run context for batches 2-4
+    const intraBatchBlock = thisRunQuestionTexts.length > 0
+      ? `\n\nQUESTIONS ALREADY IN THIS TEST (earlier batches) — DO NOT REPEAT:\n${thisRunQuestionTexts.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n`
+      : '';
 
     const prompt = `You are an expert exam question creator for STET (State Teacher Eligibility Test) and BPSC TRE (Bihar Public Service Commission Teacher Recruitment Exam) in India.
 
@@ -498,7 +609,7 @@ DIFFICULTY & PATTERN REQUIREMENTS:
 
 SUBJECT GUIDANCE:
 ${subjectGuidance}
-
+${previousQuestionsBlock}${intraBatchBlock}
 Return ONLY a valid JSON array (no markdown, no code fences, no extra text):
 [
   {
@@ -513,7 +624,7 @@ Return ONLY a valid JSON array (no markdown, no code fences, no extra text):
 Rules:
 - Exactly ${BATCH_SIZE} questions numbered ${startNum} to ${endNum}
 - correctAnswer MUST be lowercase: "a", "b", "c", "d", or "e"
-- No duplicate questions
+- No duplicate questions — each question must be COMPLETELY UNIQUE and different from all others
 - No trivially easy questions
 - All questions must be factually accurate`;
 
@@ -536,11 +647,77 @@ Rules:
       explanation: q.explanation || 'No explanation provided.',
     }));
 
+    // Track for intra-run dedup
+    renumbered.forEach(q => thisRunQuestionTexts.push(q.text));
+
     englishBatches.push(renumbered);
   }
 
   // Flatten all 80 English questions
-  const allEnglishQuestions: ManualQuestion[] = englishBatches.flat();
+  let allEnglishQuestions: ManualQuestion[] = englishBatches.flat();
+
+  // --- Pass 1.5: Post-generation dedup against historical fingerprints ---
+  if (historicalFingerprints && historicalFingerprints.length > 0) {
+    const { duplicateIndices } = findDuplicateQuestions(allEnglishQuestions, historicalFingerprints);
+
+    if (duplicateIndices.length > 0) {
+      console.log(`🔄 Found ${duplicateIndices.length} duplicate(s) with previous generations. Regenerating replacements...`);
+
+      // Collect the duplicate question texts so we can specifically ask the LLM to avoid them
+      const duplicateTexts = duplicateIndices.map(i => allEnglishQuestions[i].text);
+      const avoidBlock = `\nYou MUST NOT generate any of these questions (they are duplicates from previous tests):\n${duplicateTexts.map((t, i) => `- ${t}`).join('\n')}\n${prevTexts.length > 0 ? `\nAlso avoid ALL of these previously generated questions:\n${prevTexts.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : ''}`;
+
+      const replacementPrompt = `You are an expert exam question creator for STET and BPSC TRE exams in India.
+
+Generate exactly ${duplicateIndices.length} UNIQUE multiple-choice questions for the subject: "${subject}".
+These are replacement questions that must be COMPLETELY DIFFERENT from any previously generated questions.
+
+SUBJECT GUIDANCE:
+${subjectGuidance}
+${avoidBlock}
+
+DIFFICULTY & PATTERN REQUIREMENTS:
+- Match STET Paper II / BPSC TRE difficulty.
+- 5 options labeled a, b, c, d, e with one correct answer.
+- Plausible distractors.
+
+Return ONLY a valid JSON array:
+[
+  {
+    "number": 1,
+    "text": "Question text?",
+    "options": ["a. Option 1", "b. Option 2", "c. Option 3", "d. Option 4", "e. Option 5"],
+    "correctAnswer": "b",
+    "explanation": "Detailed explanation."
+  }
+]`;
+
+      try {
+        const replRaw = await callGemini(replacementPrompt);
+        let replJson = replRaw;
+        const replMatch = replRaw.match(/\[[\s\S]*\]/);
+        if (replMatch) replJson = replMatch[0];
+
+        const replacements: ManualQuestion[] = JSON.parse(replJson);
+
+        // Swap in replacements at the duplicate positions
+        for (let r = 0; r < Math.min(replacements.length, duplicateIndices.length); r++) {
+          const targetIdx = duplicateIndices[r];
+          allEnglishQuestions[targetIdx] = {
+            number: allEnglishQuestions[targetIdx].number,
+            text: replacements[r].text,
+            options: (replacements[r].options || []).slice(0, 5),
+            correctAnswer: (replacements[r].correctAnswer || 'a').toLowerCase(),
+            explanation: replacements[r].explanation || 'No explanation provided.',
+          };
+        }
+        console.log(`✅ Replaced ${Math.min(replacements.length, duplicateIndices.length)} duplicate question(s) with fresh ones.`);
+      } catch (replErr) {
+        console.warn('⚠️ Failed to regenerate replacement questions, keeping originals:', replErr);
+        // Proceed with the originals — they're still valid questions, just duplicates
+      }
+    }
+  }
 
   // --- Pass 2: Translate to Hindi in parallel chunks ---
   const TRANSLATE_CHUNK = 20;

@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getAllTestSeries, addTestSeries } from '@/lib/db/metadata-store';
+import { getAllTestSeries, addTestSeries, getGeneratedQuestionHistory } from '@/lib/db/metadata-store';
 import { Subject, TestSeries, BilingualQuestion } from '@/lib/types';
 import { generatePracticeTestQuestions } from '@/lib/services/gemini';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,6 +10,7 @@ import { getCurrentUser } from '@/lib/utils/auth';
  * Body: { subject: string }
  * Generates 80 AI-powered bilingual MCQs using Gemini.
  * Returns the questions for admin review WITHOUT saving to DB.
+ * Fetches previously generated question history to avoid repeats.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -25,10 +26,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Subject is required' }, { status: 400 });
     }
 
-    // 2. Generate 80 bilingual questions via Gemini AI
+    // 2. Fetch previously generated question history for this subject
+    const { fingerprints, sampleTexts } = await getGeneratedQuestionHistory(subject);
+    console.log(`📋 Found ${fingerprints.length} historical fingerprints and ${sampleTexts.length} sample texts for "${subject}"`);
+
+    // 3. Generate 80 bilingual questions via Gemini AI (with history context)
     let questions: BilingualQuestion[];
     try {
-      questions = await generatePracticeTestQuestions(subject);
+      questions = await generatePracticeTestQuestions(subject, sampleTexts, fingerprints);
     } catch (genErr) {
       console.error('AI generation failed:', genErr);
       return NextResponse.json(
@@ -44,7 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Return questions for admin review (not saved yet)
+    // 4. Return questions for admin review (not saved yet)
     return NextResponse.json(
       {
         questions,
