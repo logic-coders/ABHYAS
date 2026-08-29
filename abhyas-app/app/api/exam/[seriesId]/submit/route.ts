@@ -64,9 +64,9 @@ export async function POST(
     }
     else if (series.isManual && series.manualQuestions && series.manualQuestions.length > 0) {
       if (series.cachedQuestions && series.cachedQuestions[lang] && series.cachedQuestions[lang].length > 0) {
-        questions = series.cachedQuestions[lang].map((q, idx) => ({
+        questions = series.cachedQuestions[lang].map((q: any, idx: number) => ({
           ...q,
-          explanation: series.manualQuestions[idx]?.explanation || q.explanation,
+          explanation: series.manualQuestions![idx]?.explanation || q.explanation,
         }));
       } else {
         questions = series.manualQuestions.map((q, idx) => ({

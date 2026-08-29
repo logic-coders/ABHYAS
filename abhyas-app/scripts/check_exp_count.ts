@@ -9,7 +9,7 @@ async function run() {
   if (series) {
     let enCount = 0;
     let hiCount = 0;
-    series.bilingualQuestions?.forEach(q => {
+    series.bilingualQuestions?.forEach((q: any) => {
       if (q.english?.explanation) enCount++;
       if (q.hindi?.explanation) hiCount++;
     });
