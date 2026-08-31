@@ -33,25 +33,40 @@ export async function GET(
 
     const series = await getTestSeriesById(seriesId);
 
-    if (latestResult && series && series.bilingualQuestions) {
-      // Enrich any breakdown items missing explanations with latest series explanations
+    if (latestResult && series) {
+      // Enrich all breakdown items with latest explanations strictly in the question's language
       const enrichedBreakdown = (latestResult.breakdown || []).map((item: any) => {
-        const matchingQ = series.bilingualQuestions?.find(
-          (q) => q.number === item.questionNumber
-        );
-        const isHindi = item.questionText && /[\u0900-\u097F]/.test(item.questionText);
-        const explanation =
-          item.explanation && item.explanation.length > 5
-            ? item.explanation
-            : matchingQ
-            ? isHindi
-              ? matchingQ.hindi?.explanation || matchingQ.english?.explanation
-              : matchingQ.english?.explanation || matchingQ.hindi?.explanation
-            : `Correct answer is option (${item.correctAnswer || 'A'}).`;
+        const isHindi = !!(item.questionText && /[\u0900-\u097F]/.test(item.questionText));
+        let explanation = item.explanation;
+
+        if (series.bilingualQuestions) {
+          const matchingQ = series.bilingualQuestions.find(
+            (q) => q.number === item.questionNumber
+          );
+          if (matchingQ) {
+            explanation = isHindi
+              ? (matchingQ.hindi?.explanation || matchingQ.english?.explanation)
+              : (matchingQ.english?.explanation || matchingQ.hindi?.explanation);
+          }
+        } else if (series.manualQuestions) {
+          const manualQ = series.manualQuestions[item.questionNumber - 1];
+          if (isHindi && series.cachedQuestions?.hi) {
+            explanation =
+              series.cachedQuestions.hi[item.questionNumber - 1]?.explanation ||
+              manualQ?.explanation ||
+              explanation;
+          } else if (manualQ) {
+            explanation = manualQ.explanation || explanation;
+          }
+        }
 
         return {
           ...item,
-          explanation,
+          explanation:
+            explanation ||
+            (isHindi
+              ? `सही विकल्प (${item.correctAnswer?.toLowerCase() || 'a'}) है।`
+              : `Correct option is (${item.correctAnswer?.toUpperCase() || 'A'}).`),
         };
       });
 

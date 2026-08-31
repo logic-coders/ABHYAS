@@ -68,7 +68,7 @@ export async function POST(
       if (series.cachedQuestions && series.cachedQuestions[lang] && series.cachedQuestions[lang].length > 0) {
         questions = series.cachedQuestions[lang].map((q: any, idx: number) => ({
           ...q,
-          explanation: series.manualQuestions![idx]?.explanation || q.explanation,
+          explanation: lang === 'hi' ? (q.explanation || series.manualQuestions![idx]?.explanation) : (series.manualQuestions![idx]?.explanation || q.explanation),
         }));
       } else {
         questions = series.manualQuestions.map((q, idx) => ({
