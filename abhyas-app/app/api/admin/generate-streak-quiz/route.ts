@@ -48,7 +48,11 @@ export async function POST(request: Request) {
 
     // 1. Try AI-powered generation first if configured
     try {
-      const aiQuestions = await generateStreakQuestions(rotatingSubject);
+      const { getGeneratedQuestionHistory, addGeneratedQuestionHistory } = await import('@/lib/db/metadata-store');
+      const { normalizeForFingerprint } = await import('@/lib/services/gemini');
+
+      const { fingerprints } = await getGeneratedQuestionHistory(rotatingSubject);
+      const aiQuestions = await generateStreakQuestions(rotatingSubject, fingerprints);
       const translatedHindi = await translateQuestionsToHindi(aiQuestions);
 
       bilingualQuestions = aiQuestions.map((q, idx) => ({
@@ -56,16 +60,23 @@ export async function POST(request: Request) {
         english: {
           text: q.text,
           options: q.options,
+          explanation: q.explanation,
         },
         hindi: {
           text: translatedHindi[idx]?.text || q.text,
           options: translatedHindi[idx]?.options || q.options,
+          explanation: translatedHindi[idx]?.explanation || q.explanation,
         },
         correctAnswer: q.correctAnswer || 'A',
         status: 'verified',
       }));
       generationMethod = 'ai';
-      console.log(`✅ AI generated ${bilingualQuestions.length} bilingual questions for ${rotatingSubject}`);
+      console.log(`✅ AI generated ${bilingualQuestions.length} unique bilingual questions for ${rotatingSubject}`);
+
+      // Record fingerprints for future dedup
+      const newFps = bilingualQuestions.map(q => normalizeForFingerprint(q.english.text));
+      const newSamples = bilingualQuestions.map(q => q.english.text);
+      await addGeneratedQuestionHistory(rotatingSubject, newFps, newSamples);
     } catch (aiError) {
       console.warn('⚠️ AI generation failed or skipped, using curated bilingual pool:', aiError);
       generationMethod = 'curated';

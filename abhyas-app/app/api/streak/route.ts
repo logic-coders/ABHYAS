@@ -5,7 +5,8 @@ import { getUser } from '@/lib/utils/auth';
 import { getUserById } from '@/lib/db/user-store';
 import { SUBJECTS, Subject, BilingualQuestion } from '@/lib/types';
 import { BILINGUAL_STREAK_QUESTIONS } from '@/lib/services/streak-pool';
-import { generateStreakQuestions, translateQuestionsToHindi } from '@/lib/services/gemini';
+import { generateStreakQuestions, translateQuestionsToHindi, normalizeForFingerprint } from '@/lib/services/gemini';
+import { getGeneratedQuestionHistory, addGeneratedQuestionHistory } from '@/lib/db/metadata-store';
 import connectToDatabase from '@/lib/db/mongoose';
 import { TestSeries } from '@/lib/models/TestSeries';
 
@@ -41,7 +42,8 @@ export async function GET() {
       let bilingualQuestions: BilingualQuestion[] = [];
 
       try {
-        const aiQuestions = await generateStreakQuestions(todaySubject);
+        const { fingerprints } = await getGeneratedQuestionHistory(todaySubject);
+        const aiQuestions = await generateStreakQuestions(todaySubject, fingerprints);
         const translatedHindi = await translateQuestionsToHindi(aiQuestions);
 
         bilingualQuestions = aiQuestions.map((q, idx) => ({
@@ -49,15 +51,22 @@ export async function GET() {
           english: {
             text: q.text,
             options: q.options,
+            explanation: q.explanation,
           },
           hindi: {
             text: translatedHindi[idx]?.text || q.text,
             options: translatedHindi[idx]?.options || q.options,
+            explanation: translatedHindi[idx]?.explanation || q.explanation,
           },
           correctAnswer: q.correctAnswer || 'A',
           status: 'verified',
         }));
-        console.log(`✅ Auto-generated ${bilingualQuestions.length} bilingual AI questions for streak (${todaySubject})`);
+        console.log(`✅ Auto-generated ${bilingualQuestions.length} unique bilingual AI questions for streak (${todaySubject})`);
+
+        // Record fingerprints for future dedup
+        const newFps = bilingualQuestions.map(q => normalizeForFingerprint(q.english.text));
+        const newSamples = bilingualQuestions.map(q => q.english.text);
+        await addGeneratedQuestionHistory(todaySubject, newFps, newSamples);
       } catch (aiError) {
         console.warn('⚠️ AI generation failed during auto-gen, using curated bilingual pool:', aiError);
         const curatedList = (BILINGUAL_STREAK_QUESTIONS[todaySubject] || BILINGUAL_STREAK_QUESTIONS.Music) as NonNullable<typeof BILINGUAL_STREAK_QUESTIONS.Music>;
@@ -92,7 +101,7 @@ export async function GET() {
       cachedQuestionsMap.set('hi', cachedHi);
 
       const quizId = uuidv4();
-      const newQuiz = {
+      const newStreakDoc = {
         id: quizId,
         title: `🔥 Daily Streak Quiz — ${todaySubject}`,
         subject: todaySubject,
@@ -100,7 +109,7 @@ export async function GET() {
         format: 'quiz',
         isQuiz: true,
         isManual: false,
-        durationPerQuestion: 60,
+        durationPerQuestion: 30,
         isDailyStreak: true,
         streakDate: todayDate,
         bilingualQuestions,
@@ -110,8 +119,7 @@ export async function GET() {
         endQuestion: bilingualQuestions.length,
       };
 
-      await TestSeries.create(newQuiz);
-      streakQuiz = newQuiz;
+      streakQuiz = (await TestSeries.create(newStreakDoc)).toObject();
       console.log(`🔥 Auto-created bilingual streak quiz for ${todayDate}: ${todaySubject}`);
     }
 

@@ -143,22 +143,100 @@ export async function updateTestSeriesCache(id: string, lang: string, questions:
   );
 }
 
-// ── Generated Question History (AI Practice Test dedup) ──
+// ── Generated Question History (AI Practice Test & Quiz Dedup) ──
 
 /** Maximum sample texts kept for prompt injection (last ~2 generations worth) */
 const MAX_SAMPLE_TEXTS = 160;
 
+function cleanQuestionFingerprint(text: string): string {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .replace(/^q\d+[.:)\s]*/i, '')
+    .replace(/^[0-9]+[.:)\s]*/, '')
+    .replace(/[^a-z0-9\u0900-\u097F\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /**
  * Get previously generated question fingerprints and sample texts for a subject.
+ * Aggregates from:
+ * 1. GeneratedQuestionHistory collection
+ * 2. ALL existing TestSeries documents in MongoDB for this subject
  */
 export async function getGeneratedQuestionHistory(
   subject: string
 ): Promise<{ fingerprints: string[]; sampleTexts: string[] }> {
   await connectToDatabase();
-  const doc = await GeneratedQuestionHistory.findOne({ subject }).lean() as any;
+
+  const fingerprintSet = new Set<string>();
+  const sampleTextsSet = new Set<string>();
+
+  // 1. Fetch from GeneratedQuestionHistory table
+  try {
+    const doc = await GeneratedQuestionHistory.findOne({ subject }).lean() as any;
+    if (doc?.fingerprints) {
+      doc.fingerprints.forEach((fp: string) => {
+        const clean = cleanQuestionFingerprint(fp);
+        if (clean) fingerprintSet.add(clean);
+      });
+    }
+    if (doc?.sampleTexts) {
+      doc.sampleTexts.forEach((st: string) => {
+        if (st && st.trim()) sampleTextsSet.add(st.trim());
+      });
+    }
+  } catch (err) {
+    console.warn('Could not read GeneratedQuestionHistory:', err);
+  }
+
+  // 2. Fetch all existing test series in MongoDB matching this subject
+  try {
+    const subjectRegex = new RegExp(`^${subject.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const existingSeries = await TestSeries.find({
+      $or: [
+        { subject: subjectRegex },
+        { title: new RegExp(subject.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+      ],
+    }).lean() as any[];
+
+    for (const s of existingSeries) {
+      // Check bilingualQuestions
+      if (Array.isArray(s.bilingualQuestions)) {
+        for (const bq of s.bilingualQuestions) {
+          const enText = bq.english?.text;
+          const hiText = bq.hindi?.text;
+          if (enText) {
+            fingerprintSet.add(cleanQuestionFingerprint(enText));
+            sampleTextsSet.add(enText.trim());
+          }
+          if (hiText) {
+            fingerprintSet.add(cleanQuestionFingerprint(hiText));
+          }
+        }
+      }
+
+      // Check manualQuestions
+      if (Array.isArray(s.manualQuestions)) {
+        for (const mq of s.manualQuestions) {
+          if (mq.text) {
+            fingerprintSet.add(cleanQuestionFingerprint(mq.text));
+            sampleTextsSet.add(mq.text.trim());
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Could not aggregate test series questions for dedup:', err);
+  }
+
+  const sampleTexts = Array.from(sampleTextsSet).slice(0, MAX_SAMPLE_TEXTS);
+  const fingerprints = Array.from(fingerprintSet);
+
   return {
-    fingerprints: doc?.fingerprints ?? [],
-    sampleTexts: doc?.sampleTexts ?? [],
+    fingerprints,
+    sampleTexts,
   };
 }
 
@@ -173,6 +251,8 @@ export async function addGeneratedQuestionHistory(
 ): Promise<void> {
   await connectToDatabase();
 
+  const cleanedFps = newFingerprints.map(cleanQuestionFingerprint).filter(Boolean);
+
   // Get existing sample texts so we can prepend them and cap at MAX_SAMPLE_TEXTS
   const existing = await GeneratedQuestionHistory.findOne({ subject }).lean() as any;
   const existingSamples: string[] = existing?.sampleTexts ?? [];
@@ -181,7 +261,7 @@ export async function addGeneratedQuestionHistory(
   await GeneratedQuestionHistory.findOneAndUpdate(
     { subject },
     {
-      $addToSet: { fingerprints: { $each: newFingerprints } },
+      $addToSet: { fingerprints: { $each: cleanedFps } },
       $set: { sampleTexts: mergedSamples },
     },
     { upsert: true, new: true }

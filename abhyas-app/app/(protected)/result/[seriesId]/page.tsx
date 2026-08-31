@@ -14,13 +14,29 @@ export default function ResultPage() {
   const [showScore, setShowScore] = useState(false);
 
   useEffect(() => {
+    let currentResult: ExamResult | null = null;
     const stored = sessionStorage.getItem(`result-${seriesId}`);
     if (stored) {
-      const parsed = JSON.parse(stored) as ExamResult;
-      setResult(parsed);
-      // Trigger score animation after mount
-      setTimeout(() => setShowScore(true), 300);
+      try {
+        currentResult = JSON.parse(stored) as ExamResult;
+        setResult(currentResult);
+        setTimeout(() => setShowScore(true), 300);
+      } catch (e) {
+        console.error('Failed to parse stored result:', e);
+      }
     }
+
+    // Always fetch latest enriched result from server to populate any missing solutions
+    fetch(`/api/exam/${seriesId}/result`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((serverResult: ExamResult | null) => {
+        if (serverResult && serverResult.breakdown) {
+          setResult(serverResult);
+          sessionStorage.setItem(`result-${seriesId}`, JSON.stringify(serverResult));
+          setShowScore(true);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch enriched result:', err));
   }, [seriesId]);
 
   if (!result) {

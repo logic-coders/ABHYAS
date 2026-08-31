@@ -1,16 +1,20 @@
 /**
- * Lightweight Gemini AI utility for:
+ * Lightweight AI utility for:
  * 1. Translating manual quiz questions to Hindi
- * 2. (Future) Auto-generating streak quiz questions
+ * 2. Auto-generating streak quiz questions
+ * 3. Generating practice test questions
  *
- * Uses Google Gemini API (free tier) to conserve resources.
+ * Uses 3 AI providers with automatic failover on 429 rate limits:
+ *   Gemini (primary) → Nvidia NIM (secondary) → OpenAI (tertiary)
  */
 
 import { ManualQuestion, Subject, Question, BilingualQuestion } from '@/lib/types';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
+const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
 interface GeminiResponse {
   candidates?: {
@@ -100,45 +104,117 @@ async function callGeminiInternal(prompt: string): Promise<string> {
   return text.trim();
 }
 
+/**
+ * Calls Nvidia NIM API (meta/llama-3.1-8b-instruct — free tier)
+ * Uses OpenAI-compatible chat completions endpoint.
+ */
+async function callNvidiaInternal(prompt: string): Promise<string> {
+  if (!NVIDIA_API_KEY) {
+    throw new Error('NVIDIA_API_KEY is not configured');
+  }
+
+  const res = await fetch(NVIDIA_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${NVIDIA_API_KEY}`,
+    },
+    cache: 'no-store',
+    body: JSON.stringify({
+      model: 'meta/llama-3.2-11b-vision-instruct',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      max_tokens: 8192,
+    }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error('Nvidia API error:', res.status, errBody);
+    const err = new Error(`Nvidia API error: ${res.status}`);
+    (err as any).status = res.status;
+    throw err;
+  }
+
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content;
+
+  if (!text) {
+    throw new Error('No text in Nvidia response');
+  }
+
+  return text.trim();
+}
+
+// Provider rotation order for 3-way failover
+type AIProvider = 'gemini' | 'nvidia' | 'openai';
+const PROVIDER_ORDER: AIProvider[] = ['gemini', 'nvidia', 'openai'];
+
 // Global state to track which provider is currently active
-let activeProvider: 'gemini' | 'openai' = GEMINI_API_KEY ? 'gemini' : 'openai';
+let activeProvider: AIProvider = GEMINI_API_KEY ? 'gemini' : (NVIDIA_API_KEY ? 'nvidia' : 'openai');
+
+/**
+ * Returns whether we have a valid API key for the given provider.
+ */
+function hasKeyForProvider(provider: AIProvider): boolean {
+  switch (provider) {
+    case 'gemini': return !!GEMINI_API_KEY;
+    case 'nvidia': return !!NVIDIA_API_KEY;
+    case 'openai': return !!OPENAI_API_KEY;
+  }
+}
+
+/**
+ * Calls the specified provider's internal function.
+ */
+function callProviderInternal(provider: AIProvider, prompt: string): Promise<string> {
+  switch (provider) {
+    case 'gemini': return callGeminiInternal(prompt);
+    case 'nvidia': return callNvidiaInternal(prompt);
+    case 'openai': return callOpenAIInternal(prompt);
+  }
+}
+
+/**
+ * Gets the next available provider in rotation order after the current one.
+ * Returns null if no other provider with a valid key is available.
+ */
+function getNextProvider(current: AIProvider): AIProvider | null {
+  const currentIdx = PROVIDER_ORDER.indexOf(current);
+  for (let offset = 1; offset < PROVIDER_ORDER.length; offset++) {
+    const nextProvider = PROVIDER_ORDER[(currentIdx + offset) % PROVIDER_ORDER.length];
+    if (hasKeyForProvider(nextProvider)) {
+      return nextProvider;
+    }
+  }
+  return null;
+}
 
 /**
  * Calls the active AI provider.
- * Automatically swaps to the other provider if a 429 Rate Limit error is hit.
+ * Automatically rotates to the next available provider if a 429 Rate Limit error is hit.
+ * Rotation order: Gemini → Nvidia → OpenAI → (wrap around)
  */
 export async function callGemini(prompt: string): Promise<string> {
-  if (!GEMINI_API_KEY && !OPENAI_API_KEY) {
-    throw new Error('Neither GEMINI_API_KEY nor OPENAI_API_KEY is configured');
+  if (!GEMINI_API_KEY && !OPENAI_API_KEY && !NVIDIA_API_KEY) {
+    throw new Error('No AI API keys configured (GEMINI_API_KEY, NVIDIA_API_KEY, or OPENAI_API_KEY)');
   }
 
   try {
-    if (activeProvider === 'openai') {
-      return await callOpenAIInternal(prompt);
-    } else {
-      return await callGeminiInternal(prompt);
-    }
+    return await callProviderInternal(activeProvider, prompt);
   } catch (err: any) {
-    // If it's a rate limit error (429), try swapping
+    // If it's a rate limit error (429), try rotating to next provider
     if (err.status === 429 || err.message?.includes('429')) {
-      const otherProvider = activeProvider === 'gemini' ? 'openai' : 'gemini';
-      
-      // Only swap if we actually have the key for the other provider
-      const hasKeyForOther = otherProvider === 'gemini' ? !!GEMINI_API_KEY : !!OPENAI_API_KEY;
-      
-      if (hasKeyForOther) {
-        console.log(`⚠️ Rate limit (429) hit on ${activeProvider}. Auto-swapping to ${otherProvider} API...`);
-        activeProvider = otherProvider;
-        
-        if (activeProvider === 'openai') {
-          return await callOpenAIInternal(prompt);
-        } else {
-          return await callGeminiInternal(prompt);
-        }
+      const nextProvider = getNextProvider(activeProvider);
+
+      if (nextProvider) {
+        console.log(`⚠️ Rate limit (429) hit on ${activeProvider}. Auto-rotating to ${nextProvider} API...`);
+        activeProvider = nextProvider;
+        return await callProviderInternal(activeProvider, prompt);
       }
     }
-    
-    // Rethrow if it wasn't a 429 or if we don't have the key for the other provider
+
+    // Rethrow if it wasn't a 429 or no fallback provider available
     throw err;
   }
 }
@@ -358,9 +434,15 @@ ${JSON.stringify(chunk, null, 2)}`;
 
 /**
  * Generate 20 quiz questions for a given subject using Gemini AI.
- * Used for the Daily Streak Quiz auto-generation.
+ * Used for the Daily Streak Quiz and Speed Quiz auto-generation.
+ *
+ * @param subject - The subject to generate questions for
+ * @param excludeFingerprints - Optional normalised fingerprints to dedup against (e.g. practice test questions)
  */
-export async function generateStreakQuestions(subject: Subject): Promise<ManualQuestion[]> {
+export async function generateStreakQuestions(
+  subject: Subject,
+  excludeFingerprints?: string[]
+): Promise<ManualQuestion[]> {
   const subjectGuidance = (subject === 'Modern History' || (subject as string) === 'History')
     ? `CRITICAL REQUIREMENT FOR "Modern History":
 Every single question MUST be strictly from Modern Indian History (1757–1947).
@@ -384,6 +466,7 @@ DO NOT include Ancient or Medieval or non-Indian World History questions.`
 
 Generate exactly 20 multiple-choice questions for the subject: "${subject}".
 Each question should be at an intermediate difficulty level, suitable for competitive exam aspirants.
+These questions are for a SPEED QUIZ — they must be entirely UNIQUE and DIFFERENT from any practice test questions.
 
 ${subjectGuidance}
 
@@ -417,20 +500,76 @@ Rules:
     jsonStr = jsonMatch[0];
   }
 
-  const questions: ManualQuestion[] = JSON.parse(jsonStr);
+  let questions: ManualQuestion[] = JSON.parse(jsonStr);
 
   if (!Array.isArray(questions) || questions.length < 10) {
     throw new Error(`Expected 20 questions, got ${questions?.length || 0}`);
   }
 
   // Ensure proper numbering and structure
-  return questions.slice(0, 20).map((q, idx) => ({
+  questions = questions.slice(0, 20).map((q, idx) => ({
     number: idx + 1,
     text: q.text,
     options: q.options.slice(0, 4),
     correctAnswer: q.correctAnswer,
     explanation: q.explanation || 'No explanation provided.',
   }));
+
+  // Post-generation dedup against excluded fingerprints (practice tests & previous quizzes)
+  if (excludeFingerprints && excludeFingerprints.length > 0) {
+    let streakAttempts = 0;
+    while (streakAttempts < 3) {
+      const { duplicateIndices } = findDuplicateQuestions(questions, excludeFingerprints);
+      if (duplicateIndices.length === 0) break;
+      streakAttempts++;
+
+      console.log(`🔄 [Streak] Found ${duplicateIndices.length} duplicate question(s). Regenerating replacements (attempt ${streakAttempts})...`);
+      const duplicateTexts = duplicateIndices.map(i => questions[i].text);
+
+      const replacementPrompt = `You are an expert quiz question creator.
+Generate exactly ${duplicateIndices.length} UNIQUE multiple-choice questions for the subject: "${subject}".
+DO NOT generate any of the following questions (they already exist in our database):
+${duplicateTexts.map((t, i) => `- ${t}`).join('\n')}
+
+Rules:
+- 4 options labeled A, B, C, D
+- correctAnswer MUST be "A", "B", "C", or "D"
+- Return ONLY a valid JSON array of ${duplicateIndices.length} questions:
+[
+  {
+    "number": 1,
+    "text": "Question text...",
+    "options": ["A. Option 1", "B. Option 2", "C. Option 3", "D. Option 4"],
+    "correctAnswer": "A",
+    "explanation": "Detailed explanation..."
+  }
+]`;
+
+      try {
+        const replRaw = await callGemini(replacementPrompt);
+        let replJson = replRaw;
+        const replMatch = replRaw.match(/\[[\s\S]*\]/);
+        if (replMatch) replJson = replMatch[0];
+        const replacements: ManualQuestion[] = JSON.parse(replJson);
+
+        for (let r = 0; r < Math.min(replacements.length, duplicateIndices.length); r++) {
+          const targetIdx = duplicateIndices[r];
+          questions[targetIdx] = {
+            number: targetIdx + 1,
+            text: replacements[r].text,
+            options: (replacements[r].options || []).slice(0, 4),
+            correctAnswer: replacements[r].correctAnswer || 'A',
+            explanation: replacements[r].explanation || 'No explanation provided.',
+          };
+        }
+      } catch (err) {
+        console.warn('Could not generate replacements for streak quiz duplicates:', err);
+        break;
+      }
+    }
+  }
+
+  return questions;
 }
 
 /**
@@ -512,35 +651,58 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
 }
 
 /**
- * Check a batch of new questions against historical fingerprints.
+ * Check a batch of new questions against historical fingerprints AND intra-batch questions.
  * Returns { clean, duplicateIndices } where duplicateIndices are 0-based
- * indices of questions that are too similar to previously generated ones.
+ * indices of questions that are too similar to previously generated ones or to each other.
  *
- * Threshold: Jaccard ≥ 0.85 on word bigrams = duplicate.
+ * Threshold: Jaccard ≥ 0.70 on word bigrams or >75% word overlap = duplicate.
  */
 export function findDuplicateQuestions(
   newQuestions: ManualQuestion[],
   historicalFingerprints: string[]
 ): { duplicateIndices: number[] } {
-  const SIMILARITY_THRESHOLD = 0.85;
+  const SIMILARITY_THRESHOLD = 0.70;
 
   // Pre-compute bigrams for all historical fingerprints
   const histBigrams = historicalFingerprints.map(fp => getWordBigrams(fp));
-  const histFpSet = new Set(historicalFingerprints);
+  const histFpSet = new Set(historicalFingerprints.map(fp => fp.trim().toLowerCase()));
 
   const duplicateIndices: number[] = [];
+  const seenBatchFps: string[] = [];
+  const seenBatchBigrams: Set<string>[] = [];
 
   for (let i = 0; i < newQuestions.length; i++) {
     const fp = normalizeForFingerprint(newQuestions[i].text);
+    if (!fp) continue;
 
-    // Fast exact match check
+    // 1. Fast exact match check against historical
     if (histFpSet.has(fp)) {
       duplicateIndices.push(i);
       continue;
     }
 
-    // Bigram similarity check against all historical
+    // 2. Intra-batch duplicate check
+    if (seenBatchFps.includes(fp)) {
+      duplicateIndices.push(i);
+      continue;
+    }
+
     const newBigrams = getWordBigrams(fp);
+
+    // 3. Intra-batch similarity check
+    let isIntraDuplicate = false;
+    for (const sbb of seenBatchBigrams) {
+      if (jaccardSimilarity(newBigrams, sbb) >= SIMILARITY_THRESHOLD) {
+        isIntraDuplicate = true;
+        break;
+      }
+    }
+    if (isIntraDuplicate) {
+      duplicateIndices.push(i);
+      continue;
+    }
+
+    // 4. Bigram similarity check against all historical
     let isDuplicate = false;
     for (const hb of histBigrams) {
       if (jaccardSimilarity(newBigrams, hb) >= SIMILARITY_THRESHOLD) {
@@ -548,8 +710,12 @@ export function findDuplicateQuestions(
         break;
       }
     }
+
     if (isDuplicate) {
       duplicateIndices.push(i);
+    } else {
+      seenBatchFps.push(fp);
+      seenBatchBigrams.push(newBigrams);
     }
   }
 
@@ -656,14 +822,16 @@ Rules:
   // Flatten all 80 English questions
   let allEnglishQuestions: ManualQuestion[] = englishBatches.flat();
 
-  // --- Pass 1.5: Post-generation dedup against historical fingerprints ---
+  // --- Pass 1.5: Multi-attempt post-generation dedup against historical fingerprints ---
   if (historicalFingerprints && historicalFingerprints.length > 0) {
-    const { duplicateIndices } = findDuplicateQuestions(allEnglishQuestions, historicalFingerprints);
+    let dedupAttempts = 0;
+    while (dedupAttempts < 3) {
+      const { duplicateIndices } = findDuplicateQuestions(allEnglishQuestions, historicalFingerprints);
+      if (duplicateIndices.length === 0) break;
+      dedupAttempts++;
 
-    if (duplicateIndices.length > 0) {
-      console.log(`🔄 Found ${duplicateIndices.length} duplicate(s) with previous generations. Regenerating replacements...`);
+      console.log(`🔄 [Practice Test] Found ${duplicateIndices.length} duplicate(s) on attempt ${dedupAttempts}. Regenerating replacements...`);
 
-      // Collect the duplicate question texts so we can specifically ask the LLM to avoid them
       const duplicateTexts = duplicateIndices.map(i => allEnglishQuestions[i].text);
       const avoidBlock = `\nYou MUST NOT generate any of these questions (they are duplicates from previous tests):\n${duplicateTexts.map((t, i) => `- ${t}`).join('\n')}\n${prevTexts.length > 0 ? `\nAlso avoid ALL of these previously generated questions:\n${prevTexts.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : ''}`;
 
@@ -700,7 +868,6 @@ Return ONLY a valid JSON array:
 
         const replacements: ManualQuestion[] = JSON.parse(replJson);
 
-        // Swap in replacements at the duplicate positions
         for (let r = 0; r < Math.min(replacements.length, duplicateIndices.length); r++) {
           const targetIdx = duplicateIndices[r];
           allEnglishQuestions[targetIdx] = {
@@ -713,8 +880,8 @@ Return ONLY a valid JSON array:
         }
         console.log(`✅ Replaced ${Math.min(replacements.length, duplicateIndices.length)} duplicate question(s) with fresh ones.`);
       } catch (replErr) {
-        console.warn('⚠️ Failed to regenerate replacement questions, keeping originals:', replErr);
-        // Proceed with the originals — they're still valid questions, just duplicates
+        console.warn('⚠️ Failed to regenerate replacement questions:', replErr);
+        break;
       }
     }
   }

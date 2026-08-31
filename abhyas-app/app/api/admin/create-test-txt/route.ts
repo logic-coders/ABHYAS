@@ -95,6 +95,17 @@ export async function POST(request: NextRequest) {
 
     await addTestSeries(newTest);
 
+    // Register fingerprints for future dedup
+    try {
+      const { addGeneratedQuestionHistory } = await import('@/lib/db/metadata-store');
+      const { normalizeForFingerprint } = await import('@/lib/services/gemini');
+      const fps = questions.map(q => normalizeForFingerprint(q.english?.text || q.hindi?.text || ''));
+      const samples = questions.map(q => q.english?.text || q.hindi?.text || '');
+      await addGeneratedQuestionHistory(subject, fps, samples);
+    } catch (e) {
+      console.warn('Could not register fingerprints:', e);
+    }
+
     return NextResponse.json({
       success: true,
       message: `Test "${newTest.title}" created successfully with ${questions.length} questions!`,

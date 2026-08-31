@@ -1,8 +1,8 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getAllTestSeries, addTestSeries } from '@/lib/db/metadata-store';
 import { Subject, TestSeries, BilingualQuestion } from '@/lib/types';
-import { CURATED_STREAK_QUESTIONS } from '@/lib/services/streak-pool';
-import { generateStreakQuestions } from '@/lib/services/gemini';
+import { BILINGUAL_STREAK_QUESTIONS } from '@/lib/services/streak-pool';
+import { generateStreakQuestions, normalizeForFingerprint } from '@/lib/services/gemini';
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentUser } from '@/lib/utils/auth';
 
@@ -21,18 +21,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Subject is required' }, { status: 400 });
     }
 
-    // 1. Gather all bilingual question pools for this subject from MongoDB
+    // 1. Gather all test series for this subject from MongoDB
     const allSeries = await getAllTestSeries();
     const subjectSeries = allSeries.filter((s) => s.subject === subject);
 
+    // Collect practice test fingerprints to exclude from quiz pool
+    const practiceFingerprints: string[] = [];
+    for (const s of subjectSeries) {
+      if (s.testType === 'practice') {
+        const questions = s.bilingualQuestions || [];
+        for (const q of questions) {
+          const text = q.english?.text || q.hindi?.text || '';
+          if (text) {
+            practiceFingerprints.push(normalizeForFingerprint(text));
+          }
+        }
+      }
+    }
+
     const questionPool: BilingualQuestion[] = [];
     const seenTexts = new Set<string>();
+    const practiceTextSet = new Set(practiceFingerprints);
 
+    // Only include NON-practice series questions in the quiz pool
     for (const s of subjectSeries) {
+      // Skip practice tests — quiz must not overlap
+      if (s.testType === 'practice') continue;
+
       if (s.bilingualQuestions && s.bilingualQuestions.length > 0) {
         for (const q of s.bilingualQuestions) {
-          const key = (q.english.text || q.hindi.text || '').trim().toLowerCase();
-          if (key && !seenTexts.has(key)) {
+          const text = q.english?.text || q.hindi?.text || '';
+          const key = text.trim().toLowerCase();
+          const fp = normalizeForFingerprint(text);
+          if (key && !seenTexts.has(key) && !practiceTextSet.has(fp)) {
             seenTexts.add(key);
             questionPool.push(q);
           }
@@ -40,12 +61,13 @@ export async function POST(request: NextRequest) {
       } else if (s.manualQuestions && s.manualQuestions.length > 0) {
         for (const mq of s.manualQuestions) {
           const key = (mq.text || '').trim().toLowerCase();
-          if (key && !seenTexts.has(key)) {
+          const fp = normalizeForFingerprint(mq.text || '');
+          if (key && !seenTexts.has(key) && !practiceTextSet.has(fp)) {
             seenTexts.add(key);
             questionPool.push({
               number: mq.number,
-              english: { text: mq.text, options: mq.options },
-              hindi: { text: mq.text, options: mq.options },
+              english: { text: mq.text, options: mq.options, explanation: mq.explanation },
+              hindi: { text: mq.text, options: mq.options, explanation: mq.explanation },
               correctAnswer: mq.correctAnswer,
               status: 'verified',
             });
@@ -54,36 +76,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Include curated questions if needed
-    const curated = CURATED_STREAK_QUESTIONS[subject as Subject];
-    if (curated && curated.length > 0) {
-      for (const cq of curated) {
-        const key = (cq.text || '').trim().toLowerCase();
-        if (key && !seenTexts.has(key)) {
+    // Include bilingual curated streak questions (with explanations)
+    const curatedBilingual = BILINGUAL_STREAK_QUESTIONS[subject as Subject];
+    if (curatedBilingual && curatedBilingual.length > 0) {
+      for (const cq of curatedBilingual) {
+        const text = cq.english?.text || cq.hindi?.text || '';
+        const key = text.trim().toLowerCase();
+        const fp = normalizeForFingerprint(text);
+        if (key && !seenTexts.has(key) && !practiceTextSet.has(fp)) {
           seenTexts.add(key);
-          questionPool.push({
-            number: cq.number,
-            english: { text: cq.text, options: cq.options },
-            hindi: { text: cq.text, options: cq.options },
-            correctAnswer: cq.correctAnswer,
-            status: 'verified',
-          });
+          questionPool.push(cq);
         }
       }
     }
 
-    // If pool has fewer than needed, generate with Gemini AI
+    // If pool has fewer than needed, generate with AI (passing practice fingerprints for dedup)
     if (questionPool.length < QUESTIONS_PER_QUIZ) {
       try {
-        const aiGenerated = await generateStreakQuestions(subject as Subject);
+        const aiGenerated = await generateStreakQuestions(subject as Subject, practiceFingerprints);
         for (const gq of aiGenerated) {
           const key = (gq.text || '').trim().toLowerCase();
           if (key && !seenTexts.has(key)) {
             seenTexts.add(key);
             questionPool.push({
               number: gq.number,
-              english: { text: gq.text, options: gq.options },
-              hindi: { text: gq.text, options: gq.options },
+              english: { text: gq.text, options: gq.options, explanation: gq.explanation },
+              hindi: { text: gq.text, options: gq.options, explanation: gq.explanation },
               correctAnswer: gq.correctAnswer,
               status: 'verified',
             });
@@ -111,15 +129,18 @@ export async function POST(request: NextRequest) {
     const countToTake = Math.min(QUESTIONS_PER_QUIZ, shuffled.length);
     const selected = shuffled.slice(0, countToTake);
 
+    // Build final bilingual questions — preserve explanations
     const finalBilingualQuestions: BilingualQuestion[] = selected.map((q, idx) => ({
       number: idx + 1,
       english: {
         text: q.english?.text || q.hindi?.text || '',
         options: q.english?.options || q.hindi?.options || [],
+        explanation: q.english?.explanation,
       },
       hindi: {
         text: q.hindi?.text || q.english?.text || '',
         options: q.hindi?.options || q.english?.options || [],
+        explanation: q.hindi?.explanation,
       },
       correctAnswer: q.correctAnswer || 'A',
       status: 'verified',
@@ -136,12 +157,14 @@ export async function POST(request: NextRequest) {
       number: q.number,
       text: q.english.text,
       options: q.english.options,
+      explanation: q.english.explanation,
     }));
 
     const cachedHi = finalBilingualQuestions.map((q) => ({
       number: q.number,
       text: q.hindi.text,
       options: q.hindi.options,
+      explanation: q.hindi.explanation,
     }));
 
     const cachedQuestionsMap = new Map();

@@ -51,8 +51,10 @@ export async function POST(
         number: idx + 1,
         text: lang === 'hi' ? q.hindi.text : q.english.text,
         options: lang === 'hi' ? q.hindi.options : q.english.options,
-        // For Hindi: only use Hindi explanation (don't silently mix languages)
-        explanation: lang === 'hi' ? q.hindi.explanation : q.english.explanation,
+        explanation:
+          lang === 'hi'
+            ? (q.hindi.explanation || q.english.explanation || `सही उत्तर विकल्प (${q.correctAnswer || 'A'}) है।`)
+            : (q.english.explanation || q.hindi.explanation || `The correct answer is option (${q.correctAnswer || 'A'}).`),
       }));
 
       series.bilingualQuestions.forEach((q, idx) => {
