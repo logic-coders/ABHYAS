@@ -109,6 +109,17 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
     // Clean up leading indicator or punctuation
     let cleanedSeg = seg.replace(/^[-•*▶]\s*/, '').replace(/।$/, '').trim();
 
+    // Check if segment has introductory text followed by a colon and a formula/bracketed calculation
+    // e.g. "गलत वजन का उपयोग करने पर बेईमान डीलर के लिए लाभ प्रतिशत किसके द्वारा दिया जाता है: [(वास्तविक वजन - गलत वजन) ...]"
+    const colonFormulaMatch = cleanedSeg.match(/^([^:=><\d]{5,})[:=]\s*([\[\(].*[=><\+\-\*\/].*)/);
+    if (colonFormulaMatch) {
+      structuredItems.push({
+        type: 'text',
+        content: colonFormulaMatch[1].trim() + ':',
+      });
+      cleanedSeg = colonFormulaMatch[2].trim();
+    }
+
     // Check if line has a leading introductory word (e.g. "इसलिए, a * sqrt(3) = 6 * sqrt(3)")
     const leadingIntroMatch = cleanedSeg.match(/^(इसलिए|चूँकि|अर्थात|अतः|Therefore|Hence|Since)[,:]?\s+(.+)/i);
     if (leadingIntroMatch && /[=≠≈><≤≥]/.test(leadingIntroMatch[2])) {
@@ -117,6 +128,25 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
         content: leadingIntroMatch[1] + ':',
       });
       cleanedSeg = leadingIntroMatch[2].trim();
+    }
+
+    // If calculation has chained "=" (e.g. "[(1000 - 900) / 900] * 100 = (100 / 900) * 100 = 100/9% = 11.11%")
+    if (cleanedSeg.includes('=')) {
+      const parts = cleanedSeg.split(/\s*=\s*/);
+      if (parts.length > 2) {
+        // Chained equation! Break into line by line calculations
+        structuredItems.push({
+          type: 'calc',
+          content: `${parts[0]} = ${parts[1]}`,
+        });
+        for (let p = 2; p < parts.length; p++) {
+          structuredItems.push({
+            type: 'calc',
+            content: `= ${parts[p]}`,
+          });
+        }
+        continue;
+      }
     }
 
     // Check if line is a mathematical equation/calculation

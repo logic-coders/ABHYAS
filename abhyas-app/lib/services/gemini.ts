@@ -10,9 +10,18 @@
 
 import { ManualQuestion, Subject, Question, BilingualQuestion } from '@/lib/types';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
+function getGeminiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY;
+}
+
+function getOpenAIKey(): string | undefined {
+  return process.env.OPENAI_API_KEY;
+}
+
+function getNvidiaKey(): string | undefined {
+  return process.env.NVIDIA_API_KEY;
+}
+
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
 const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
@@ -28,7 +37,8 @@ interface GeminiResponse {
  * Calls OpenAI API (gpt-4o-mini)
  */
 async function callOpenAIInternal(prompt: string): Promise<string> {
-  if (!OPENAI_API_KEY) {
+  const key = getOpenAIKey();
+  if (!key) {
     throw new Error('OPENAI_API_KEY is not configured');
   }
 
@@ -36,7 +46,7 @@ async function callOpenAIInternal(prompt: string): Promise<string> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`
+      'Authorization': `Bearer ${key}`
     },
     cache: 'no-store',
     body: JSON.stringify({
@@ -68,11 +78,12 @@ async function callOpenAIInternal(prompt: string): Promise<string> {
  * Calls Gemini API
  */
 async function callGeminiInternal(prompt: string): Promise<string> {
-  if (!GEMINI_API_KEY) {
+  const key = getGeminiKey();
+  if (!key) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+  const res = await fetch(`${GEMINI_API_URL}?key=${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
@@ -105,11 +116,12 @@ async function callGeminiInternal(prompt: string): Promise<string> {
 }
 
 /**
- * Calls Nvidia NIM API (meta/llama-3.1-8b-instruct — free tier)
+ * Calls Nvidia NIM API (meta/llama-3.2-11b-vision-instruct — free tier)
  * Uses OpenAI-compatible chat completions endpoint.
  */
 async function callNvidiaInternal(prompt: string): Promise<string> {
-  if (!NVIDIA_API_KEY) {
+  const key = getNvidiaKey();
+  if (!key) {
     throw new Error('NVIDIA_API_KEY is not configured');
   }
 
@@ -117,7 +129,7 @@ async function callNvidiaInternal(prompt: string): Promise<string> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${NVIDIA_API_KEY}`,
+      'Authorization': `Bearer ${key}`,
     },
     cache: 'no-store',
     body: JSON.stringify({
@@ -150,17 +162,14 @@ async function callNvidiaInternal(prompt: string): Promise<string> {
 type AIProvider = 'gemini' | 'nvidia' | 'openai';
 const PROVIDER_ORDER: AIProvider[] = ['gemini', 'nvidia', 'openai'];
 
-// Global state to track which provider is currently active
-let activeProvider: AIProvider = GEMINI_API_KEY ? 'gemini' : (NVIDIA_API_KEY ? 'nvidia' : 'openai');
-
 /**
  * Returns whether we have a valid API key for the given provider.
  */
 function hasKeyForProvider(provider: AIProvider): boolean {
   switch (provider) {
-    case 'gemini': return !!GEMINI_API_KEY;
-    case 'nvidia': return !!NVIDIA_API_KEY;
-    case 'openai': return !!OPENAI_API_KEY;
+    case 'gemini': return !!getGeminiKey();
+    case 'nvidia': return !!getNvidiaKey();
+    case 'openai': return !!getOpenAIKey();
   }
 }
 
@@ -196,9 +205,12 @@ function getNextProvider(current: AIProvider): AIProvider | null {
  * Rotation order: Gemini → Nvidia → OpenAI → (wrap around)
  */
 export async function callGemini(prompt: string): Promise<string> {
-  if (!GEMINI_API_KEY && !OPENAI_API_KEY && !NVIDIA_API_KEY) {
+  const initialProvider: AIProvider = getGeminiKey() ? 'gemini' : (getNvidiaKey() ? 'nvidia' : 'openai');
+  if (!getGeminiKey() && !getOpenAIKey() && !getNvidiaKey()) {
     throw new Error('No AI API keys configured (GEMINI_API_KEY, NVIDIA_API_KEY, or OPENAI_API_KEY)');
   }
+
+  let activeProvider = initialProvider;
 
   try {
     return await callProviderInternal(activeProvider, prompt);
@@ -214,7 +226,6 @@ export async function callGemini(prompt: string): Promise<string> {
       }
     }
 
-    // Rethrow if it wasn't a 429 or no fallback provider available
     throw err;
   }
 }
