@@ -444,6 +444,137 @@ ${JSON.stringify(chunk, null, 2)}`;
 }
 
 /**
+ * Automatically structures and polishes raw explanation text into numbered step-by-step format:
+ * "Step 1: [Concept and Formula]" / "चरण 1: [अवधारणा या सूत्र]"
+ * "Step 2: [Substituting Values]" / "चरण 2: [मान रखने पर]"
+ * "Step 3: [Calculation]" / "चरण 3: [गणना - प्रत्येक समीकरण अलग पंक्ति में]"
+ * "Correct option is (X)." / "सही विकल्प (x) है।"
+ */
+export function formatRawExplanationToSteps(
+  raw: string,
+  isHindi: boolean,
+  correctAnswer: string
+): string {
+  if (!raw) return '';
+
+  const ansLetter = (correctAnswer || 'a').toLowerCase();
+
+  // If already properly structured with Step 1 / चरण 1
+  if (isHindi && raw.includes('चरण 1:') && raw.includes('चरण 2:')) {
+    if (!/(?:सही विकल्प|सही उत्तर)/i.test(raw)) {
+      return `${raw.trim()}\n\nसही विकल्प (${ansLetter}) है।`;
+    }
+    return raw.trim();
+  }
+  if (!isHindi && raw.includes('Step 1:') && raw.includes('Step 2:')) {
+    if (!/(?:Correct option|Correct answer)/i.test(raw)) {
+      return `${raw.trim()}\n\nCorrect option is (${ansLetter.toUpperCase()}).`;
+    }
+    return raw.trim();
+  }
+
+  let text = raw
+    .replace(/\s*\|\s*/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/=>|⇒|->|→/g, '\n')
+    .trim();
+
+  const lines: string[] = [];
+  for (const l of text.split('\n')) {
+    const trimmed = l.trim();
+    if (!trimmed) continue;
+
+    // Split on sentence connectors
+    const connectorSplit = trimmed.split(
+      /(?:,\s*(?:अतः|इसलिए|जहाँ|चूँकि|where|hence|therefore)\s*|,\s*(?=तब)|;\s*)/i
+    );
+    for (const piece of connectorSplit) {
+      let p = piece.trim();
+      if (!p) continue;
+      if (p.includes('।')) {
+        for (const d of p.split(/(?<=।)\s+/g)) {
+          if (d.trim()) lines.push(d.trim().replace(/।$/, ''));
+        }
+      } else {
+        lines.push(p);
+      }
+    }
+  }
+
+  const cleanLines: string[] = [];
+  for (const line of lines) {
+    const isConclusion =
+      /(?:सही उत्तर|सही विकल्प|Correct Option|Correct Answer)/i.test(line) &&
+      /(?:[a-eA-E]|\d+)/.test(line);
+    if (isConclusion) continue;
+
+    // Split chained equalities
+    if (line.includes('=')) {
+      const parts = line.split(/\s*=\s*/);
+      if (parts.length > 2) {
+        if (
+          parts.length === 3 &&
+          parts[0].length < 15 &&
+          !parts[1].includes('*') &&
+          !parts[2].includes('*')
+        ) {
+          cleanLines.push(line);
+          continue;
+        }
+        cleanLines.push(`${parts[0]} = ${parts[1]}`);
+        for (let p = 2; p < parts.length; p++) {
+          cleanLines.push(`= ${parts[p]}`);
+        }
+        continue;
+      }
+    }
+    cleanLines.push(line);
+  }
+
+  if (cleanLines.length === 0) {
+    return isHindi
+      ? `चरण 1: [अवधारणा]\n${raw}\n\nसही विकल्प (${ansLetter}) है।`
+      : `Step 1: [Concept]\n${raw}\n\nCorrect option is (${ansLetter.toUpperCase()}).`;
+  }
+
+  if (isHindi) {
+    let result = 'चरण 1: [अवधारणा या सूत्र]\n';
+    result += cleanLines[0] + '\n\n';
+
+    if (cleanLines.length > 1) {
+      result += 'चरण 2: [मान रखने पर]\n';
+      const mid = Math.max(2, Math.floor(cleanLines.length * 0.6));
+      const middleLines = cleanLines.slice(1, mid);
+      result += middleLines.join('\n') + '\n\n';
+
+      result += 'चरण 3: [गणना - प्रत्येक समीकरण अलग पंक्ति में]\n';
+      const lastLines = cleanLines.slice(mid);
+      result += (lastLines.length > 0 ? lastLines.join('\n') : middleLines[middleLines.length - 1] || '') + '\n\n';
+    }
+
+    result += `सही विकल्प (${ansLetter}) है।`;
+    return result;
+  } else {
+    let result = 'Step 1: [Concept and Formula]\n';
+    result += cleanLines[0] + '\n\n';
+
+    if (cleanLines.length > 1) {
+      result += 'Step 2: [Substituting Values]\n';
+      const mid = Math.max(2, Math.floor(cleanLines.length * 0.6));
+      const middleLines = cleanLines.slice(1, mid);
+      result += middleLines.join('\n') + '\n\n';
+
+      result += 'Step 3: [Calculation]\n';
+      const lastLines = cleanLines.slice(mid);
+      result += (lastLines.length > 0 ? lastLines.join('\n') : middleLines[middleLines.length - 1] || '') + '\n\n';
+    }
+
+    result += `Correct option is (${ansLetter.toUpperCase()}).`;
+    return result;
+  }
+}
+
+/**
  * Generate 20 quiz questions for a given subject using Gemini AI.
  * Used for the Daily Streak Quiz and Speed Quiz auto-generation.
  *
@@ -580,7 +711,10 @@ Rules:
     }
   }
 
-  return questions;
+  return questions.map((q) => ({
+    ...q,
+    explanation: formatRawExplanationToSteps(q.explanation || '', false, q.correctAnswer),
+  }));
 }
 
 /**
@@ -772,6 +906,19 @@ export async function generatePracticeTestQuestions(
       ? `\n\nQUESTIONS ALREADY IN THIS TEST (earlier batches) — DO NOT REPEAT:\n${thisRunQuestionTexts.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n`
       : '';
 
+    const mathFormatGuide = subject.toLowerCase().includes('math')
+      ? `\n\nMATHEMATICAL EXPLANATION RULES:
+1. Break every mathematical explanation into numbered steps:
+   - "Step 1: [Formula or Concept]"
+   - "Step 2: [Substituting Values]"
+   - "Step 3: [Calculation - each equation on a separate line]"
+   - "Correct option is (X)."
+2. Never write chained calculations on a single line (NEVER write A = B = C = D). Write each step on a new line.
+3. Show rigorous mathematical proofs.`
+      : `\n\nEXPLANATION RULES:
+1. Provide a comprehensive, step-by-step academic explanation clarifying why the correct answer is right and why other options are incorrect.
+2. End with "Correct option is (X)."`;
+
     const prompt = `You are an expert exam question creator for STET (State Teacher Eligibility Test) and BPSC TRE (Bihar Public Service Commission Teacher Recruitment Exam) in India.
 
 Generate exactly ${BATCH_SIZE} multiple-choice questions for the subject: "${subject}".
@@ -786,7 +933,8 @@ DIFFICULTY & PATTERN REQUIREMENTS:
 
 SUBJECT GUIDANCE:
 ${subjectGuidance}
-${previousQuestionsBlock}${intraBatchBlock}
+${previousQuestionsBlock}${intraBatchBlock}${mathFormatGuide}
+
 Return ONLY a valid JSON array (no markdown, no code fences, no extra text):
 [
   {
@@ -794,7 +942,7 @@ Return ONLY a valid JSON array (no markdown, no code fences, no extra text):
     "text": "Question text here?",
     "options": ["a. Option 1", "b. Option 2", "c. Option 3", "d. Option 4", "e. Option 5"],
     "correctAnswer": "b",
-    "explanation": "A detailed, full explanation in simple language clarifying why the correct answer is right, providing relevant historical, scientific, or mathematical context and why other key options are incorrect."
+    "explanation": "Step 1: Formula...\\nStep 2: Values...\\nStep 3: Calculation...\\nCorrect option is (B)."
   }
 ]
 
@@ -909,10 +1057,11 @@ Translate the following multiple-choice questions from English to Hindi.
 
 Rules:
 1. Translate question text, all option text, and the explanation into formal academic Hindi (शुद्ध हिंदी).
-2. Keep option labels (a., b., c., d., e.) intact.
-3. Preserve all numbers, equations, proper nouns, and technical terms (like compound names) exactly as-is.
-4. Do NOT translate the "correctAnswer" or "number" fields.
-5. Return ONLY the same JSON structure, no markdown, no extra text.
+2. For explanations, translate 'Step 1', 'Step 2', 'Step 3' to 'चरण 1:', 'चरण 2:', 'चरण 3:' and end with 'सही विकल्प (x) है।' (where x is lowercase option letter).
+3. Keep option labels (a., b., c., d., e.) intact.
+4. Preserve all numbers, equations, formulas, proper nouns, and technical terms exactly as-is.
+5. Do NOT translate the "correctAnswer" or "number" fields.
+6. Return ONLY the same JSON structure, no markdown, no extra text.
 
 JSON to translate:
 ${JSON.stringify(chunk, null, 2)}`;
@@ -933,19 +1082,20 @@ ${JSON.stringify(chunk, null, 2)}`;
   // --- Pass 3: Merge into BilingualQuestion[] ---
   const bilingualQuestions: BilingualQuestion[] = allEnglishQuestions.map((enQ, idx) => {
     const hiQ = allHindiQuestions[idx];
+    const ans = (enQ.correctAnswer || 'a').toLowerCase();
     return {
       number: enQ.number,
       english: {
         text: enQ.text,
         options: (enQ.options || []).slice(0, 5),
-        explanation: enQ.explanation,
+        explanation: formatRawExplanationToSteps(enQ.explanation || '', false, ans),
       },
       hindi: {
         text: hiQ?.text || enQ.text,
         options: (hiQ?.options || enQ.options || []).slice(0, 5),
-        explanation: hiQ?.explanation || enQ.explanation,
+        explanation: formatRawExplanationToSteps(hiQ?.explanation || enQ.explanation || '', true, ans),
       },
-      correctAnswer: (enQ.correctAnswer || 'a').toLowerCase(),
+      correctAnswer: ans,
       status: 'verified' as const,
     };
   });

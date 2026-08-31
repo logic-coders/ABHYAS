@@ -93,6 +93,24 @@ export default function AdminQuizManager() {
     setPreviewQuestions(updated);
   };
 
+  const updateEnglishExplanation = (qIdx: number, text: string) => {
+    const updated = [...previewQuestions];
+    updated[qIdx] = {
+      ...updated[qIdx],
+      english: { ...updated[qIdx].english, explanation: text },
+    };
+    setPreviewQuestions(updated);
+  };
+
+  const updateHindiExplanation = (qIdx: number, text: string) => {
+    const updated = [...previewQuestions];
+    updated[qIdx] = {
+      ...updated[qIdx],
+      hindi: { ...updated[qIdx].hindi, explanation: text },
+    };
+    setPreviewQuestions(updated);
+  };
+
   // ── Publish ──
   const handleApproveAndPublish = async () => {
     if (previewQuestions.length === 0) return;
@@ -336,6 +354,33 @@ export default function AdminQuizManager() {
                             </div>
                           );
                         })}
+                      </div>
+
+                      {/* Detailed Step-by-Step Explanations */}
+                      <div className="explanation-section">
+                        <p className="options-section-label">💡 Detailed Step-by-Step Solutions (विस्तृत चरणबद्ध समाधान)</p>
+                        <div className="bilingual-edit-row">
+                          <div className="lang-block">
+                            <label className="lang-label">🇬🇧 English Detailed Solution</label>
+                            <textarea
+                              className="form-textarea"
+                              rows={4}
+                              placeholder="Step 1: Formula...\nStep 2: Values...\nStep 3: Calculation...\nCorrect option is (X)."
+                              value={q.english.explanation || ''}
+                              onChange={(e) => updateEnglishExplanation(qIdx, e.target.value)}
+                            />
+                          </div>
+                          <div className="lang-block">
+                            <label className="lang-label">🇮🇳 Hindi Detailed Solution (विस्तृत समाधान)</label>
+                            <textarea
+                              className="form-textarea"
+                              rows={4}
+                              placeholder="चरण 1: सूत्र...\nचरण 2: मान रखने पर...\nचरण 3: गणना...\nसही विकल्प (x) है।"
+                              value={q.hindi.explanation || ''}
+                              onChange={(e) => updateHindiExplanation(qIdx, e.target.value)}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -791,10 +836,17 @@ export default function AdminQuizManager() {
         }
 
         /* Options section */
-        .options-section {
+        .options-section,
+        .explanation-section {
           display: flex;
           flex-direction: column;
           gap: 0.6rem;
+        }
+
+        .explanation-section {
+          margin-top: 0.5rem;
+          padding-top: 0.8rem;
+          border-top: 1px dashed var(--border-subtle);
         }
 
         .options-section-label {
