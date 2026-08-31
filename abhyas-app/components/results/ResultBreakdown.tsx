@@ -16,13 +16,14 @@ interface SolutionLine {
 function renderFormattedExplanation(rawText: string, isHindi: boolean) {
   if (!rawText) return null;
 
-  // 1. Normalize line separators: replace pipes '|' and clean double spaces
+  // 1. Normalize line separators: replace pipes, arrows, and carriage returns
   let text = rawText
     .replace(/\s*\|\s*/g, '\n')
     .replace(/\r\n/g, '\n')
+    .replace(/=>|⇒|->|→/g, '\n')
     .trim();
 
-  // 2. Break text by explicit newlines, step markers, and Hindi/English sentence boundaries with calculations
+  // 2. Break text by explicit newlines, step markers, connectors, and dandas
   const rawSegments: string[] = [];
   const lines = text.split('\n');
 
@@ -37,14 +38,21 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
       const segTrimmed = seg.trim();
       if (!segTrimmed) continue;
 
-      // If segment has multiple Hindi full-stops '।' with math formulas inside, split them line by line
-      if (segTrimmed.includes('।')) {
-        const dandaSplit = segTrimmed.split(/(?<=।)\s+/g);
-        for (const sub of dandaSplit) {
-          if (sub.trim()) rawSegments.push(sub.trim());
+      // Split on sentence connectors like ", अतः ", ", इसलिए ", ", तब ", "; "
+      const connectorSplit = segTrimmed.split(/(?:,\s*(?:अतः|इसलिए|जहाँ|चूँकि|where|hence|therefore)\s*|,\s*(?=तब)|;\s*)/i);
+      for (const piece of connectorSplit) {
+        const p = piece.trim();
+        if (!p) continue;
+
+        // If segment has multiple Hindi full-stops '।' with math formulas inside, split them line by line
+        if (p.includes('।')) {
+          const dandaSplit = p.split(/(?<=।)\s+/g);
+          for (const sub of dandaSplit) {
+            if (sub.trim()) rawSegments.push(sub.trim());
+          }
+        } else {
+          rawSegments.push(p);
         }
-      } else {
-        rawSegments.push(segTrimmed);
       }
     }
   }
@@ -53,13 +61,22 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
   const structuredItems: SolutionLine[] = [];
 
   for (const seg of rawSegments) {
+    // Clean up leading indicators, punctuation, or leftover arrows
+    let cleanedSeg = seg
+      .replace(/^[-•*▶=>⇒→]+\s*/, '')
+      .replace(/^[,\s]+/, '')
+      .replace(/।$/, '')
+      .trim();
+
+    if (!cleanedSeg) continue;
+
     // Check for Conclusion / Final Answer
     const isConclusion =
-      /^(?:सही उत्तर|सही विकल्प|Correct Answer|Correct Option|अतः,\s*सही|अतः\s*सही)/i.test(seg) ||
-      (/(?:सही उत्तर|सही विकल्प|Correct Option|Correct Answer)/i.test(seg) && /(?:[a-eA-E]|\d+)/.test(seg));
+      /^(?:सही उत्तर|सही विकल्प|Correct Answer|Correct Option|अतः,\s*सही|अतः\s*सही)/i.test(cleanedSeg) ||
+      (/(?:सही उत्तर|सही विकल्प|Correct Option|Correct Answer)/i.test(cleanedSeg) && /(?:[a-eA-E]|\d+)/.test(cleanedSeg));
 
     if (isConclusion) {
-      let cleanContent = seg.replace(/^[-•*▶]\s*/, '').trim();
+      let cleanContent = cleanedSeg;
 
       if (isHindi) {
         // Strip leading "अतः," or "अतः"
@@ -93,7 +110,7 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
     }
 
     // Check for Step Headers (e.g. "चरण 1:", "Step 1:", "सूत्र:")
-    const stepMatch = seg.match(/^((?:चरण\s*\d+|Step\s*\d+|दिया गया है|Given|सूत्र|Formula|गणना|Calculation|निष्कर्ष|Conclusion)[:\-])\s*(.*)/i);
+    const stepMatch = cleanedSeg.match(/^((?:चरण\s*\d+|Step\s*\d+|दिया गया है|Given|सूत्र|Formula|गणना|Calculation|निष्कर्ष|Conclusion)[:\-])\s*(.*)/i);
     if (stepMatch) {
       const label = stepMatch[1].trim();
       const body = stepMatch[2]?.trim() || '';
@@ -106,11 +123,7 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
       continue;
     }
 
-    // Clean up leading indicator or punctuation
-    let cleanedSeg = seg.replace(/^[-•*▶]\s*/, '').replace(/।$/, '').trim();
-
     // Check if segment has introductory text followed by a colon and a formula/bracketed calculation
-    // e.g. "गलत वजन का उपयोग करने पर बेईमान डीलर के लिए लाभ प्रतिशत किसके द्वारा दिया जाता है: [(वास्तविक वजन - गलत वजन) ...]"
     const colonFormulaMatch = cleanedSeg.match(/^([^:=><\d]{5,})[:=]\s*([\[\(].*[=><\+\-\*\/].*)/);
     if (colonFormulaMatch) {
       structuredItems.push({
@@ -130,11 +143,20 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
       cleanedSeg = leadingIntroMatch[2].trim();
     }
 
-    // If calculation has chained "=" (e.g. "[(1000 - 900) / 900] * 100 = (100 / 900) * 100 = 100/9% = 11.11%")
+    // If calculation has chained "=" (e.g. "क्षेत्रफल = लंबाई * चौड़ाई = 50 * 30 = 1500 m^2")
     if (cleanedSeg.includes('=')) {
       const parts = cleanedSeg.split(/\s*=\s*/);
       if (parts.length > 2) {
-        // Chained equation! Break into line by line calculations
+        // e.g. "परिमाप = 2(l + b) = 160" -> 3 parts formula: Keep intact as one line
+        if (parts.length === 3 && parts[0].length < 15 && !parts[1].includes('*') && !parts[2].includes('*')) {
+          structuredItems.push({
+            type: 'calc',
+            content: cleanedSeg,
+          });
+          continue;
+        }
+
+        // Multi-step calculation chain: break line by line
         structuredItems.push({
           type: 'calc',
           content: `${parts[0]} = ${parts[1]}`,
@@ -142,7 +164,7 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
         for (let p = 2; p < parts.length; p++) {
           structuredItems.push({
             type: 'calc',
-            content: `= ${parts[p]}`,
+            content: `  = ${parts[p]}`,
           });
         }
         continue;
@@ -152,7 +174,9 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
     // Check if line is a mathematical equation/calculation
     const hasMathEqual = /[=≠≈><≤≥]/.test(cleanedSeg);
     const hasMathSymbols = /[\+\-\*\/\^×÷√²³%]/.test(cleanedSeg) || /\d+/.test(cleanedSeg);
-    const isMathLine = hasMathEqual && (hasMathSymbols || /^(?:प्रत्येक भुजा|क्षेत्रफल|परिमाप|विकर्ण|d\d|HCF|LCM|Area|Perimeter|TSA|CSA)/i.test(cleanedSeg));
+    const isMathLine =
+      hasMathEqual ||
+      (hasMathSymbols && /^(?:प्रत्येक भुजा|क्षेत्रफल|परिमाप|विकर्ण|d\d|HCF|LCM|Area|Perimeter|TSA|CSA|2l|l\s*=|b\s*=|x\s*=|y\s*=|तब\s+|दिया गया है)/i.test(cleanedSeg));
 
     if (isMathLine) {
       structuredItems.push({
