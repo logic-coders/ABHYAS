@@ -25,6 +25,30 @@ function getNvidiaKey(): string | undefined {
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
 const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
+/**
+ * Resilient JSON parser for AI outputs that may contain unescaped LaTeX/math backslashes,
+ * trailing commas, or markdown wrapping.
+ */
+export function safeJsonParse<T>(raw: string): T {
+  let jsonStr = raw.trim();
+  const m = jsonStr.match(/\[[\s\S]*\]/) || jsonStr.match(/\{[\s\S]*\}/);
+  if (m) jsonStr = m[0];
+
+  try {
+    return JSON.parse(jsonStr) as T;
+  } catch (err1: any) {
+    try {
+      // Fix unescaped backslashes (e.g. \sqrt, \frac, \theta, \times) and trailing commas
+      const fixed = jsonStr
+        .replace(/\\(?!["\\/bfnrtu]|u[0-9a-fA-F]{4})/g, '\\\\')
+        .replace(/,\s*([\]}])/g, '$1');
+      return JSON.parse(fixed) as T;
+    } catch (err2: any) {
+      throw new Error(`Failed to parse AI JSON response: ${err1.message}`);
+    }
+  }
+}
+
 interface GeminiResponse {
   candidates?: {
     content?: {
@@ -264,12 +288,7 @@ ${JSON.stringify(chunk, null, 2)}`;
 
       promises.push(
         callGemini(prompt).then((rawResponse) => {
-          let jsonStr = rawResponse;
-          const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            jsonStr = jsonMatch[0];
-          }
-          return JSON.parse(jsonStr) as ManualQuestion[];
+          return safeJsonParse<ManualQuestion[]>(rawResponse);
         })
       );
     }
@@ -339,14 +358,7 @@ ${text}
 
     // Wait, the text can be huge, but Gemini Flash has 1M context. Let's send it.
     const rawResponse = await callGemini(prompt);
-    
-    let jsonStr = rawResponse;
-    const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[0];
-    }
-    
-    let questions = JSON.parse(jsonStr) as Question[];
+    let questions = safeJsonParse<Question[]>(rawResponse);
     
     // Ensure we only return questions within start and end
     questions = questions.filter(q => q.number >= start && q.number <= end);
@@ -398,12 +410,7 @@ ${JSON.stringify(chunk, null, 2)}`;
 
       promises.push(
         callGemini(prompt).then((rawResponse) => {
-          let jsonStr = rawResponse;
-          const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            jsonStr = jsonMatch[0];
-          }
-          return JSON.parse(jsonStr) as Question[];
+          return safeJsonParse<Question[]>(rawResponse);
         })
       );
     }
@@ -634,15 +641,7 @@ Rules:
 - Return exactly 20 questions`;
 
   const rawResponse = await callGemini(prompt);
-
-  // Extract JSON
-  let jsonStr = rawResponse;
-  const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
-  if (jsonMatch) {
-    jsonStr = jsonMatch[0];
-  }
-
-  let questions: ManualQuestion[] = JSON.parse(jsonStr);
+  let questions: ManualQuestion[] = safeJsonParse<ManualQuestion[]>(rawResponse);
 
   if (!Array.isArray(questions) || questions.length < 10) {
     throw new Error(`Expected 20 questions, got ${questions?.length || 0}`);
@@ -689,10 +688,7 @@ Rules:
 
       try {
         const replRaw = await callGemini(replacementPrompt);
-        let replJson = replRaw;
-        const replMatch = replRaw.match(/\[[\s\S]*\]/);
-        if (replMatch) replJson = replMatch[0];
-        const replacements: ManualQuestion[] = JSON.parse(replJson);
+        const replacements: ManualQuestion[] = safeJsonParse<ManualQuestion[]>(replRaw);
 
         for (let r = 0; r < Math.min(replacements.length, duplicateIndices.length); r++) {
           const targetIdx = duplicateIndices[r];
@@ -954,11 +950,7 @@ Rules:
 - All questions must be factually accurate`;
 
     const rawResponse = await callGemini(prompt);
-    let jsonStr = rawResponse;
-    const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
-    if (jsonMatch) jsonStr = jsonMatch[0];
-
-    const batch_questions: ManualQuestion[] = JSON.parse(jsonStr);
+    const batch_questions: ManualQuestion[] = safeJsonParse<ManualQuestion[]>(rawResponse);
     if (!Array.isArray(batch_questions) || batch_questions.length < 15) {
       throw new Error(`Batch ${batch + 1} returned only ${batch_questions?.length || 0} questions`);
     }
@@ -1021,11 +1013,7 @@ Return ONLY a valid JSON array:
 
       try {
         const replRaw = await callGemini(replacementPrompt);
-        let replJson = replRaw;
-        const replMatch = replRaw.match(/\[[\s\S]*\]/);
-        if (replMatch) replJson = replMatch[0];
-
-        const replacements: ManualQuestion[] = JSON.parse(replJson);
+        const replacements: ManualQuestion[] = safeJsonParse<ManualQuestion[]>(replRaw);
 
         for (let r = 0; r < Math.min(replacements.length, duplicateIndices.length); r++) {
           const targetIdx = duplicateIndices[r];
@@ -1068,10 +1056,7 @@ ${JSON.stringify(chunk, null, 2)}`;
 
     translationPromises.push(
       callGemini(translatePrompt).then((raw) => {
-        let jsonStr = raw;
-        const m = raw.match(/\[[\s\S]*\]/);
-        if (m) jsonStr = m[0];
-        return JSON.parse(jsonStr) as ManualQuestion[];
+        return safeJsonParse<ManualQuestion[]>(raw);
       })
     );
   }
