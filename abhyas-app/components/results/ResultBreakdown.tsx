@@ -13,7 +13,7 @@ interface SolutionLine {
   content: string;
 }
 
-function renderFormattedExplanation(rawText: string, isHindi: boolean) {
+function renderFormattedExplanation(rawText: string, isHindi: boolean, correctAnswer?: string) {
   if (!rawText) return null;
 
   // 1. Normalize line separators: replace pipes, arrows, and carriage returns
@@ -190,6 +190,16 @@ function renderFormattedExplanation(rawText: string, isHindi: boolean) {
       });
     }
   }
+  
+  // 4. Force inject a conclusion if the explanation lacks one and we have a valid correct answer
+  const hasConclusion = structuredItems.some(item => item.type === 'conclusion');
+  if (!hasConclusion && correctAnswer && correctAnswer !== '?') {
+    const formattedAns = correctAnswer.trim().toUpperCase();
+    structuredItems.push({
+      type: 'conclusion',
+      content: isHindi ? `सही विकल्प (${formattedAns}) है।` : `Correct option is (${formattedAns}).`,
+    });
+  }
 
   const conclusionBadgeLabel = isHindi ? '✓ सही उत्तर' : '✓ Correct Answer';
 
@@ -352,7 +362,7 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
                       <span className="explanation-title">{isHindi ? 'विस्तृत चरणबद्ध समाधान' : 'Detailed Step-by-Step Solution'}</span>
                     </div>
                     <div className="explanation-body">
-                      {renderFormattedExplanation(item.explanation, !!isHindi)}
+                      {renderFormattedExplanation(item.explanation, !!isHindi, item.correctAnswer)}
                     </div>
                   </div>
                 )}
@@ -644,6 +654,7 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
           color: #e2e8f0;
           box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
           transition: all 0.2s ease;
+          overflow-x: auto;
         }
 
         .math-calc-line:hover {
@@ -715,6 +726,25 @@ export default function ResultBreakdown({ breakdown }: ResultBreakdownProps) {
           }
           .answer-badges {
             margin-left: auto;
+          }
+          .detail-option {
+            flex-wrap: wrap;
+            padding: 0.75rem 0.8rem;
+          }
+          .opt-tag {
+            margin-left: 2.25rem;
+            margin-top: 0.2rem;
+          }
+          .math-calc-line {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+          }
+          .solution-conclusion-card {
+            font-size: 0.9rem;
+            padding: 0.6rem 0.8rem;
+          }
+          .breakdown-summary {
+            padding: 0.75rem 0.8rem;
           }
         }
       `}</style>
